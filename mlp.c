@@ -9,24 +9,31 @@
 #include <stdbool.h>
 
 #include "mat_ops.h"
+#include "data_ops.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // HYPERPARAMETERS
 ////////////////////////////////////////////////////////////////////////////////
 
+/*
 #define TOTAL_SET_SIZE 60000
 
 #define TRAIN_SET_SPLIT 0.8f
 // training set split + validation set split = 1.0
 #define TRAIN_SET_SIZE (floorf(TRAIN_SET_SPLIT * TOTAL_SET_SIZE))
-#define VAL_SET_SIZE (TOTAL_SET_SIZE - TRAIN_SET_SIZE)
+#define TEST_SET_SIZE (TOTAL_SET_SIZE - TRAIN_SET_SIZE)
+*/
+
+#define TRAIN_SET_SIZE 60000
+#define TEST_SET_SIZE 10000
 
 #define INPUT_DIM 784
 #define LAYER_1_DIM 10
 #define LAYER_2_DIM 10
 
-#define NUM_ITERATIONS 60
+#define NUM_EPOCHS 50
 #define BATCH_SIZE 1000
+#define NUM_ITERATIONS (TRAIN_SET_SIZE / BATCH_SIZE * NUM_EPOCHS)
 #define LEARNING_RATE 0.1f
 
 #define UPDATE_FREQ 1
@@ -388,8 +395,10 @@ float get_accuracy(float *A2, int *Y, int A2_m, int A2_n) {
 ////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char *argv[]) {
-    float *train_set;
-    float *val_set;
+    float *train_input;
+    int *train_labels;
+    float *test_input;
+    int *test_labels;
 
     float *W1;  // layer 1 dim x input dim
     float *B1;  // layer 1 dim x 1
@@ -401,17 +410,20 @@ int main(int argc, char *argv[]) {
     float *Z2;  // layer 2 dim x batch size
     float *A2;  // layer 2 dim x batch size
 
-    float *X;          // input dim x batch size
-    int *Y;            // 1 x batch size
-    float *one_hot_Y;  // layer 2 dim x batch size
+    int *train_epoch_indices;  // 1 x training set size
+    float *X;                  // input dim x batch size
+    int *Y;                    // 1 x batch size
+    float *one_hot_Y;          // layer 2 dim x batch size
     
     float *dW1;  // layer 1 dim x input dim
     float *dB1;  // layer 1 dim x 1
     float *dW2;  // layer 2 dim x layer 1 dim
     float *dB2;  // layer 2 dim x 1
 
-    train_set = malloc(TRAIN_SET_SIZE * INPUT_DIM * sizeof(float));
-    val_set = malloc(VAL_SET_SIZE * INPUT_DIM * sizeof(float));
+    train_input = malloc(TRAIN_SET_SIZE * INPUT_DIM * sizeof(float));
+    train_labels = malloc(TRAIN_SET_SIZE * sizeof(int));
+    test_input = malloc(TEST_SET_SIZE * INPUT_DIM * sizeof(float));
+    test_labels = malloc(TEST_SET_SIZE *sizeof(int));
 
     W1 = malloc(LAYER_1_DIM * INPUT_DIM * sizeof(float));
     B1 = malloc(LAYER_1_DIM * sizeof(float));
@@ -423,6 +435,7 @@ int main(int argc, char *argv[]) {
     Z2 = malloc(LAYER_2_DIM * BATCH_SIZE * sizeof(float));
     A2 = malloc(LAYER_2_DIM * BATCH_SIZE * sizeof(float));
 
+    train_epoch_indices = malloc(TRAIN_SET_SIZE * sizeof(int));
     X = malloc(INPUT_DIM * BATCH_SIZE * sizeof(float));
     Y = malloc(BATCH_SIZE * sizeof(int));
     one_hot_Y = malloc(LAYER_2_DIM * BATCH_SIZE * sizeof(float));
@@ -433,7 +446,13 @@ int main(int argc, char *argv[]) {
     dB2 = malloc(LAYER_2_DIM * sizeof(float));
     
     // load in data into training and validation sets
-    // TODO
+    load_mnist(train_input, train_labels,
+               test_input, test_labels);
+
+    // initialize training batch indices
+    for (int i = 0; i < TRAIN_SET_SIZE; i++) {
+        train_epoch_indices[i] = i;
+    }
 
     // initialize parameters
     init_weights_he(W1, LAYER_1_DIM, INPUT_DIM);
@@ -441,10 +460,31 @@ int main(int argc, char *argv[]) {
     init_weights_xavier(W2, LAYER_2_DIM, LAYER_1_DIM);
     init_biases(B2, LAYER_2_DIM);
 
-    // gradient descent
+    int batch_start_idx = 0;
+
+    // gradient descent (batched)
     for (int i = 0; i < NUM_ITERATIONS; i++) {
-        // prepare batch
-        // TODO
+        // per epoch
+        if (i % (TRAIN_SET_SIZE / BATCH_SIZE) == 0 ) {
+            // shuffle training indices
+            shuffle(train_epoch_indices, TRAIN_SET_SIZE);
+
+            // reset position for `train_epoch_indices` reads
+            batch_start_idx = 0;
+        }
+
+        // load batch training points
+        for (int j = 0; j < BATCH_SIZE; j++) {
+            int train_point_idx = train_epoch_indices[batch_start_idx + j];
+
+            // load training image data
+            for (int k = 0; k < INPUT_DIM; k++) {
+                X[k * BATCH_SIZE + j] = train_input[train_point_idx * INPUT_DIM + k];
+            }
+
+            // load training labels
+            Y[j] = train_labels[train_point_idx];
+        }
 
         // forward prop
         batched_forward_prop(W1, B1, W2, B2, X,
@@ -467,19 +507,27 @@ int main(int argc, char *argv[]) {
                       LEARNING_RATE,
                       INPUT_DIM, LAYER_1_DIM, LAYER_2_DIM);
 
+        // accuracy update
         if (i % UPDATE_FREQ == 0) {
             printf("Iteration: %d\n", i);
             
             // calculate and print training accuracy
             float accuracy = get_accuracy(A2, Y, LAYER_2_DIM, BATCH_SIZE);
             printf("Accuracy: %f\n\n", accuracy);
+
+            // calculate and print test accuracy
+            // TODO
         }
+
+        batch_start_idx += BATCH_SIZE;
     }
 
     // free memory
 
-    free(train_set);
-    free(val_set);
+    free(train_input);
+    free(train_labels);
+    free(test_input);
+    free(test_labels);
 
     free(W1);
     free(B1);
