@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-void check_read_error(size_t num_read, size_t count, FILE *stream) {
+static void check_read_error(size_t num_read, size_t count, FILE *stream) {
     if (num_read < count) {
         if (ferror(stream)) {
             perror("File read error");
@@ -17,7 +17,7 @@ void check_read_error(size_t num_read, size_t count, FILE *stream) {
     }
 }
 
-uint32_t swap_endian32(uint32_t val) {
+static uint32_t swap_endian32(uint32_t val) {
     return (val << 24)
            | ((val << 8) & 0x00FF0000)
            | ((val >> 8) & 0x0000FF00)

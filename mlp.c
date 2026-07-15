@@ -33,10 +33,11 @@
 
 #define NUM_EPOCHS 50
 #define BATCH_SIZE 1000
-#define NUM_ITERATIONS (TRAIN_SET_SIZE / BATCH_SIZE * NUM_EPOCHS)
+#define EPOCH_ITERS (TRAIN_SET_SIZE / BATCH_SIZE)
+#define NUM_ITERATIONS (EPOCH_ITERS * NUM_EPOCHS)
 #define LEARNING_RATE 0.1f
 
-#define UPDATE_FREQ 10
+#define TRAIN_UPDATE_FREQ 10
 
 ////////////////////////////////////////////////////////////////////////////////
 // HELPER MACROS
@@ -184,7 +185,8 @@ void softmax(float *Z, int Z_m, int Z_n, float *A) {
  * @param[out] Z2          Weighted sums of second layer
  * @param[out] A2          Activations of second layer
  */
-void batched_forward_prop(float *W1, float *B1, float *W2, float *B2, float *X,
+void batched_forward_prop(float *W1, float *B1, float *W2, float *B2,
+                          float *X,
                           int input_dim, int layer_1_dim, int layer_2_dim,
                           int batch_size,
                           float *Z1, float *A1, float *Z2, float *A2) {
@@ -352,14 +354,14 @@ void update_params(float *W1, float *B1, float *W2, float *B2,
 }
 
 /**
- * @brief Computes training accuracy of a batch
+ * @brief Computes accuracy of a group of data points (batch or set)
  * 
  * @param[in] A2   Activations of second layer
- * @param[in] Y    Labels of the training points in batch
+ * @param[in] Y    Labels of the data points
  * @param[in] A2_m Dimension of second layer
- * @param[in] A2_n Size of training batch
+ * @param[in] A2_n Size of group
  * 
- * @return Training accuracy of batch
+ * @return Accuracy of model on group
  */
 float get_accuracy(float *A2, int *Y, int A2_m, int A2_n) {
     float *A2_T = malloc(A2_m * A2_n * sizeof(float));
@@ -371,10 +373,12 @@ float get_accuracy(float *A2, int *Y, int A2_m, int A2_n) {
 
     int num_correct = 0;
 
+    // for each training example
     for (int i = 0; i < A2_n; i++) {
         max_prob = A2_T[i * A2_m];
         max_label = 0;
 
+        // for each output category
         for (int j = 1; j < A2_m; j++) {
             bool new_max = A2_T[i * A2_m + j] > max_prob;
             max_prob = new_max ? A2_T[i * A2_m + j] : max_prob;
@@ -390,6 +394,45 @@ float get_accuracy(float *A2, int *Y, int A2_m, int A2_n) {
     return (float)num_correct / A2_n;
 }
 
+/**
+ * @brief Computes test accuracy on a test set
+ * 
+ * - Runs forward propagation for entire test set, then computes accuracy in
+ * the same way as training accuracy
+ * 
+ * @param[in]  W1            Weights of first layer
+ * @param[in]  B1            Biases of first layer
+ * @param[in]  W2            Weights of second layer
+ * @param[in]  B2            Biases of second layer
+ * @param[in]  X             Input
+ * @param[in]  Y             Labels
+ * @param[in]  input_dim     Dimension of input layer
+ * @param[in]  layer_1_dim   Dimension of layer 1
+ * @param[in]  layer_2_dim   Dimension of layer 2
+ * @param[in]  test_set_size Size of test set
+ * @param[out] Z1            Weighted sums of first layer
+ * @param[out] A1            Activations of first layer
+ * @param[out] Z2            Weighted sums of second layer
+ * @param[out] A2            Activations of second layer
+ * 
+ * @return Accuracy of model on test set
+ */
+float get_test_accuracy(float *W1, float *B1, float *W2, float *B2,
+                        float *X, int *Y,
+                        int input_dim, int layer_1_dim, int layer_2_dim,
+                        int test_set_size,
+                        float *Z1, float *A1, float *Z2, float *A2) {
+
+    batched_forward_prop(W1, B1, W2, B2,
+                         X,
+                         input_dim, layer_1_dim, layer_2_dim,
+                         test_set_size,
+                         Z1, A1, Z2, A2);
+
+    return get_accuracy(A2, Y, layer_2_dim, test_set_size);
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // TRAINING / GRADIENT DESCENT
 ////////////////////////////////////////////////////////////////////////////////
@@ -398,6 +441,7 @@ int main(int argc, char *argv[]) {
     float *train_input;
     int *train_labels;
     float *test_input;
+    float *test_input_T;
     int *test_labels;
 
     float *W1;  // layer 1 dim x input dim
@@ -409,6 +453,11 @@ int main(int argc, char *argv[]) {
     float *A1;  // layer 1 dim x batch size
     float *Z2;  // layer 2 dim x batch size
     float *A2;  // layer 2 dim x batch size
+
+    float *Z1_test;  // layer 1 dim x test set size
+    float *A1_test;  // layer 1 dim x test set size
+    float *Z2_test;  // layer 2 dim x test set size
+    float *A2_test;  // layer 2 dim x test set size
 
     int *train_epoch_indices;  // 1 x training set size
     float *X;                  // input dim x batch size
@@ -423,6 +472,7 @@ int main(int argc, char *argv[]) {
     train_input = malloc(TRAIN_SET_SIZE * INPUT_DIM * sizeof(float));
     train_labels = malloc(TRAIN_SET_SIZE * sizeof(int));
     test_input = malloc(TEST_SET_SIZE * INPUT_DIM * sizeof(float));
+    test_input_T = malloc(INPUT_DIM * TEST_SET_SIZE * sizeof(float));
     test_labels = malloc(TEST_SET_SIZE *sizeof(int));
 
     W1 = malloc(LAYER_1_DIM * INPUT_DIM * sizeof(float));
@@ -434,6 +484,12 @@ int main(int argc, char *argv[]) {
     A1 = malloc(LAYER_1_DIM * BATCH_SIZE * sizeof(float));
     Z2 = malloc(LAYER_2_DIM * BATCH_SIZE * sizeof(float));
     A2 = malloc(LAYER_2_DIM * BATCH_SIZE * sizeof(float));
+
+    Z1_test = malloc(LAYER_1_DIM * TEST_SET_SIZE * sizeof(float));
+    A1_test = malloc(LAYER_1_DIM * TEST_SET_SIZE * sizeof(float));
+    Z2_test = malloc(LAYER_2_DIM * TEST_SET_SIZE * sizeof(float));
+    A2_test = malloc(LAYER_2_DIM * TEST_SET_SIZE * sizeof(float));
+
 
     train_epoch_indices = malloc(TRAIN_SET_SIZE * sizeof(int));
     X = malloc(INPUT_DIM * BATCH_SIZE * sizeof(float));
@@ -448,6 +504,7 @@ int main(int argc, char *argv[]) {
     // load in data into training and validation sets
     load_mnist(train_input, train_labels,
                test_input, test_labels);
+    transpose(test_input, TEST_SET_SIZE, INPUT_DIM, test_input_T);
 
     // initialize training batch indices
     for (int i = 0; i < TRAIN_SET_SIZE; i++) {
@@ -461,11 +518,13 @@ int main(int argc, char *argv[]) {
     init_biases(B2, LAYER_2_DIM);
 
     int batch_start_idx = 0;
+    float train_accuracy;
+    float test_accuracy;
 
     // gradient descent (batched)
     for (int i = 0; i < NUM_ITERATIONS; i++) {
         // per epoch
-        if (i % (TRAIN_SET_SIZE / BATCH_SIZE) == 0 ) {
+        if (i % EPOCH_ITERS == 0 ) {
             // shuffle training indices
             shuffle(train_epoch_indices, TRAIN_SET_SIZE);
 
@@ -487,7 +546,8 @@ int main(int argc, char *argv[]) {
         }
 
         // forward prop
-        batched_forward_prop(W1, B1, W2, B2, X,
+        batched_forward_prop(W1, B1, W2, B2,
+                             X,
                              INPUT_DIM, LAYER_1_DIM, LAYER_2_DIM,
                              BATCH_SIZE,
                              Z1, A1, Z2, A2);
@@ -508,26 +568,44 @@ int main(int argc, char *argv[]) {
                       INPUT_DIM, LAYER_1_DIM, LAYER_2_DIM);
 
         // accuracy update
-        if (i % UPDATE_FREQ == 0) {
-            printf("Epoch: %d\n", i / (TRAIN_SET_SIZE / BATCH_SIZE));
+        if (i % TRAIN_UPDATE_FREQ == 0) {
+            printf("Epoch: %d\n", i / EPOCH_ITERS);
             printf("Iteration: %d\n", i);
             
             // calculate and print training accuracy
-            float accuracy = get_accuracy(A2, Y, LAYER_2_DIM, BATCH_SIZE);
-            printf("Training accuracy: %f\n\n", accuracy);
+            train_accuracy = get_accuracy(A2, Y, LAYER_2_DIM, BATCH_SIZE);
+            printf("Training accuracy: %.4f\n", train_accuracy);
 
-            // calculate and print test accuracy
-            // TODO
+            // test accuracy update
+            if (i % EPOCH_ITERS == 0) {
+                // calculate and print test accuracy
+                test_accuracy = get_test_accuracy(W1, B1, W2, B2,
+                                                  test_input_T, test_labels,
+                                                  INPUT_DIM, LAYER_1_DIM, LAYER_2_DIM,
+                                                  TEST_SET_SIZE,
+                                                  Z1_test, A1_test, Z2_test, A2_test);
+            }
+            printf("Most recent test accuracy: %.4f\n", test_accuracy);
+
+            printf("\n");
         }
 
         batch_start_idx += BATCH_SIZE;
     }
+
+    test_accuracy = get_test_accuracy(W1, B1, W2, B2,
+                                       test_input_T, test_labels,
+                                       INPUT_DIM, LAYER_1_DIM, LAYER_2_DIM,
+                                       TEST_SET_SIZE,
+                                       Z1_test, A1_test, Z2_test, A2_test);
+    printf("Final test accuracy: %.4f\n", test_accuracy);
 
     // free memory
 
     free(train_input);
     free(train_labels);
     free(test_input);
+    free(test_input_T);
     free(test_labels);
 
     free(W1);
@@ -540,7 +618,14 @@ int main(int argc, char *argv[]) {
     free(Z2);
     free(A2);
 
+    free(Z1_test);
+    free(A1_test);
+    free(Z2_test);
+    free(A2_test);
+
+    free(train_epoch_indices);
     free(X);
+    free(Y);
     free(one_hot_Y);
 
     free(dW1);
