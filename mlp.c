@@ -2,6 +2,8 @@
  * mlp.c - Basic MLP for an arbitrary workload
  */
 
+#include "mlp.h"
+
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -437,7 +439,7 @@ static float get_test_accuracy(float *W1, float *B1, float *W2, float *B2,
 // TRAINING / GRADIENT DESCENT
 ////////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char *argv[]) {
+void train() {
     float *train_input;
     int *train_labels;
     float *test_input;
@@ -632,6 +634,4 @@ int main(int argc, char *argv[]) {
     free(dB1);
     free(dW2);
     free(dB2);
-
-    return 0;
 }

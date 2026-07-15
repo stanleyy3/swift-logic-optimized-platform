@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -O1 -g -pg -MMD -MP
 LDLIBS = -lm
-TARGET = mlp
+TARGET = train
 
 # get .o and .d dependencies
 SRCS = $(wildcard *.c)
