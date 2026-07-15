@@ -36,7 +36,7 @@
 #define NUM_ITERATIONS (TRAIN_SET_SIZE / BATCH_SIZE * NUM_EPOCHS)
 #define LEARNING_RATE 0.1f
 
-#define UPDATE_FREQ 1
+#define UPDATE_FREQ 10
 
 ////////////////////////////////////////////////////////////////////////////////
 // HELPER MACROS
@@ -509,11 +509,12 @@ int main(int argc, char *argv[]) {
 
         // accuracy update
         if (i % UPDATE_FREQ == 0) {
+            printf("Epoch: %d\n", i / (TRAIN_SET_SIZE / BATCH_SIZE));
             printf("Iteration: %d\n", i);
             
             // calculate and print training accuracy
             float accuracy = get_accuracy(A2, Y, LAYER_2_DIM, BATCH_SIZE);
-            printf("Accuracy: %f\n\n", accuracy);
+            printf("Training accuracy: %f\n\n", accuracy);
 
             // calculate and print test accuracy
             // TODO
