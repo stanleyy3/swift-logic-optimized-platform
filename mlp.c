@@ -60,7 +60,7 @@
  * @param[in]     fan_out Dimension of next layer
  * @param[in]     fan_in  Dimension of previous layer
  */
-void init_weights_he(float *W, int fan_out, int fan_in) {
+static void init_weights_he(float *W, int fan_out, int fan_in) {
     //srand(67u);
 
     // He initialization uniform sampling boundary
@@ -87,7 +87,7 @@ void init_weights_he(float *W, int fan_out, int fan_in) {
  * @param[in]      fan_out Dimension of next layer
  * @param[in]      fan_in  Dimension of previous layer
  */
-void init_weights_xavier(float *W, int fan_out, int fan_in) {
+static void init_weights_xavier(float *W, int fan_out, int fan_in) {
     //srand(67u);
 
     // Xavier initialization uniform sampling boundary
@@ -113,7 +113,7 @@ void init_weights_xavier(float *W, int fan_out, int fan_in) {
  * @param[in, out] B         Biases
  * @param[in]      layer_dim Dimension of layer
  */
-void init_biases(float *B, int layer_dim) {
+static void init_biases(float *B, int layer_dim) {
     // zero-initialize all biases
     memset(B, 0, layer_dim * sizeof(float));
 }
@@ -126,7 +126,7 @@ void init_biases(float *B, int layer_dim) {
  * @param[in]  Z_n Batch size
  * @param[out] A   ReLU activations of layer
  */
-void relu(float *Z, int Z_m, int Z_n, float *A) {
+static void relu(float *Z, int Z_m, int Z_n, float *A) {
     for (int i = 0; i < Z_m; i++) {
         for (int j = 0; j < Z_n; j++) {
             A[i * Z_n + j] = MAX(0, Z[i * Z_n + j]);
@@ -142,7 +142,7 @@ void relu(float *Z, int Z_m, int Z_n, float *A) {
  * @param[in]  Z_n Batch size
  * @param[out] A   Softmax activations of layer
  */
-void softmax(float *Z, int Z_m, int Z_n, float *A) {
+static void softmax(float *Z, int Z_m, int Z_n, float *A) {
     float *norm_term = calloc(Z_n, sizeof(float));
 
     // compute exponentiated elements and accumulate sum
@@ -185,11 +185,11 @@ void softmax(float *Z, int Z_m, int Z_n, float *A) {
  * @param[out] Z2          Weighted sums of second layer
  * @param[out] A2          Activations of second layer
  */
-void batched_forward_prop(float *W1, float *B1, float *W2, float *B2,
-                          float *X,
-                          int input_dim, int layer_1_dim, int layer_2_dim,
-                          int batch_size,
-                          float *Z1, float *A1, float *Z2, float *A2) {
+static void batched_forward_prop(float *W1, float *B1, float *W2, float *B2,
+                                 float *X,
+                                 int input_dim, int layer_1_dim, int layer_2_dim,
+                                 int batch_size,
+                                 float *Z1, float *A1, float *Z2, float *A2) {
 
     // propagate through layer 1
     mat_mat_mul(W1, X, layer_1_dim, input_dim, batch_size, Z1);
@@ -211,7 +211,7 @@ void batched_forward_prop(float *W1, float *B1, float *W2, float *B2,
  * @param[in]  Z_n Batch size
  * @param[out] Z_p Output matrix
  */
-void relu_deriv(float *Z, int Z_m, int Z_n, float *Z_p) {
+static void relu_deriv(float *Z, int Z_m, int Z_n, float *Z_p) {
     // loop over Z_p's elements
     for (int i = 0; i < Z_m; i++) {
         for (int j = 0; j < Z_n; j++) {
@@ -228,7 +228,7 @@ void relu_deriv(float *Z, int Z_m, int Z_n, float *Z_p) {
  * @param[in]  batch_size Size of training batch
  * @param[out] one_hot_Y  One-hot encoding of `Y`
  */
-void one_hot(int *Y, int dim, int batch_size, float *one_hot_Y) {
+static void one_hot(int *Y, int dim, int batch_size, float *one_hot_Y) {
     memset(one_hot_Y, 0, dim * batch_size * sizeof(float));
 
     for (int i = 0; i < batch_size; i++) {
@@ -256,12 +256,12 @@ void one_hot(int *Y, int dim, int batch_size, float *one_hot_Y) {
  * @param[out] dW2         Gradient for weights of second layer
  * @param[out] dB2         Gradient for biases of second layer
  */
-void batched_back_prop(float *Z1, float *A1, float *Z2, float *A2,
-                       float *W1, float *W2,
-                       float *X, float *Y,
-                       int input_dim, int layer_1_dim, int layer_2_dim,
-                       int batch_size,
-                       float *dW1, float *dB1, float *dW2, float *dB2) {
+static void batched_back_prop(float *Z1, float *A1, float *Z2, float *A2,
+                              float *W1, float *W2,
+                              float *X, float *Y,
+                              int input_dim, int layer_1_dim, int layer_2_dim,
+                              int batch_size,
+                              float *dW1, float *dB1, float *dW2, float *dB2) {
 
     float batch_size_inv = 1.f / batch_size;
 
@@ -330,10 +330,10 @@ void batched_back_prop(float *Z1, float *A1, float *Z2, float *A2,
  * @param[in]       layer_1_dim Dimension of first layer
  * @param[in]       layer_2_dim Dimension of second layer
  */
-void update_params(float *W1, float *B1, float *W2, float *B2,
-                   float *dW1, float *dB1, float *dW2, float *dB2,
-                   float alpha,
-                   int input_dim, int layer_1_dim, int layer_2_dim) {
+static void update_params(float *W1, float *B1, float *W2, float *B2,
+                          float *dW1, float *dB1, float *dW2, float *dB2,
+                          float alpha,
+                          int input_dim, int layer_1_dim, int layer_2_dim) {
     
     // update W1
     scal_mat_mul(alpha, dW1, layer_1_dim, input_dim, dW1);
@@ -363,7 +363,7 @@ void update_params(float *W1, float *B1, float *W2, float *B2,
  * 
  * @return Accuracy of model on group
  */
-float get_accuracy(float *A2, int *Y, int A2_m, int A2_n) {
+static float get_accuracy(float *A2, int *Y, int A2_m, int A2_n) {
     float *A2_T = malloc(A2_m * A2_n * sizeof(float));
 
     transpose(A2, A2_m, A2_n, A2_T);
@@ -417,11 +417,11 @@ float get_accuracy(float *A2, int *Y, int A2_m, int A2_n) {
  * 
  * @return Accuracy of model on test set
  */
-float get_test_accuracy(float *W1, float *B1, float *W2, float *B2,
-                        float *X, int *Y,
-                        int input_dim, int layer_1_dim, int layer_2_dim,
-                        int test_set_size,
-                        float *Z1, float *A1, float *Z2, float *A2) {
+static float get_test_accuracy(float *W1, float *B1, float *W2, float *B2,
+                               float *X, int *Y,
+                               int input_dim, int layer_1_dim, int layer_2_dim,
+                               int test_set_size,
+                               float *Z1, float *A1, float *Z2, float *A2) {
 
     batched_forward_prop(W1, B1, W2, B2,
                          X,
