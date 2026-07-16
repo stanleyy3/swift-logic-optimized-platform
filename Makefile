@@ -1,7 +1,12 @@
 CC = gcc
-CFLAGS = -O1 -g -pg -MMD -MP
+CFLAGS = -O2 -MMD -MP
 LDLIBS = -lm
 TARGET = train
+
+# optionally add profiling flags
+ifeq ($(PROFILE), 1)
+CFLAGS += -g -pg
+endif
 
 BUILD_DIR = build
 
@@ -31,4 +36,4 @@ $(BUILD_DIR):
 # clean target
 .PHONY: clean
 clean:
-	rm -rf $(TARGET) $(BUILD_DIR)
+	rm -rf $(TARGET) $(BUILD_DIR) gmon.out

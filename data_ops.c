@@ -2,6 +2,8 @@
  * data_ops.c - Management of data
  */
 
+#include "data_ops.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>

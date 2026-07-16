@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+//#include <time.h>
 
 #include "mat_ops.h"
 #include "data_ops.h"
@@ -63,7 +64,7 @@
  * @param[in]     fan_in  Dimension of previous layer
  */
 static void init_weights_he(float *W, int fan_out, int fan_in) {
-    //srand(67u);
+    //srand(time(NULL));
 
     // He initialization uniform sampling boundary
     float b = sqrtf(6.f / fan_in);
@@ -90,7 +91,7 @@ static void init_weights_he(float *W, int fan_out, int fan_in) {
  * @param[in]      fan_in  Dimension of previous layer
  */
 static void init_weights_xavier(float *W, int fan_out, int fan_in) {
-    //srand(67u);
+    //srand(time(NULL));
 
     // Xavier initialization uniform sampling boundary
     float b = sqrtf(6.f / (fan_in + fan_out));
