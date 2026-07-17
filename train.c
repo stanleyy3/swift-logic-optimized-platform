@@ -8,7 +8,7 @@
 // HARDCODED HYPERPARAMETERS
 ////////////////////////////////////////////////////////////////////////////////
 
-#define TRAIN_UPDATE_FREQ 10
+#define TRAIN_UPDATE_ITERS 100
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -454,7 +454,7 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
         }
 
         // accuracy update
-        if (i % TRAIN_UPDATE_FREQ == 0) {
+        if (i % TRAIN_UPDATE_ITERS == 0) {
             // calculate training accuracy
             // note: evaluates on predictions from previous iteration before latest parameter update
             train_accuracy = get_accuracy(&MLP, batch_Y, batch_size, TRAIN);

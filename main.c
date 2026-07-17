@@ -70,17 +70,17 @@ static void get_hyperparams(int *num_hidden_layers, int **hidden_layer_dims,
 
     // get batch size
     do {
-        printf("Batch size (100-1000): ");
+        printf("Batch size (1-1000): ");
 
         ret = scanf("%d", batch_size);
         if (ret == EOF) exit(0);     // Ctrl-D pressed
         if (ret != 1) scanf("%*s");  // flush an invalid token
-    } while (ret != 1 || *batch_size < 100 || *batch_size > 1000);
+    } while (ret != 1 || *batch_size < 1 || *batch_size > 1000);
     printf("\n");
 
     // get learning rate
     do {
-        printf("Learning rate (0.01, 0.02, 0.05, 0.10): ");
+        printf("Learning rate (0.01, 0.02, 0.05, 0.10, 0.20): ");
 
         ret = scanf("%f", learning_rate);
         if (ret == EOF) exit(0);     // Ctrl-D pressed
@@ -89,7 +89,8 @@ static void get_hyperparams(int *num_hidden_layers, int **hidden_layer_dims,
              || !(*learning_rate == 0.01f
                   || *learning_rate == 0.02f
                   || *learning_rate == 0.05f
-                  || *learning_rate == 0.1f));
+                  || *learning_rate == 0.1f
+                  || *learning_rate == 0.2f));
     printf("\n");
 }
 
