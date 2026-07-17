@@ -344,6 +344,41 @@ static float get_test_accuracy(Model *model) {
 
 }
 
+/**
+ * @brief Clears terminal and prints header for model
+ * 
+ * @param[in] model         Model whose header is to be printed
+ * @param[in] num_epochs    Number of epochs
+ * @param[in] batch_size    Size of batch
+ * @param[in] learning_rate Learning rate
+ */
+static void print_model_header(Model *model,
+                               int num_epochs, int batch_size, float learning_rate) {
+    // \e[1;1H moves the cursor to row 1, column 1
+    // \e[2J clears the entire screen
+    printf("\e[1;1H\e[2J");
+
+    printf("--------------------------------------------------------------\n");
+    printf("| MLP Training                                               |\n");
+    printf("| accelerated by Swift Logic Optimized Platform (SLOP)       |\n");
+    printf("--------------------------------------------------------------\n");
+    printf("\n");
+
+    printf("Dataset: MNIST\n");
+    printf("Architecture: %d -> ", model->i_d);
+    for (int L = 0; L < model->n_h_l; L++) printf("%d -> ", model->h_l_d[L]);
+    printf("%d\n", model->o_d);
+    printf("\n");
+
+    printf("Number of epochs: %d\n", num_epochs);
+    printf("Batch size: %d\n", batch_size);
+    printf("Learning rate: %.2f\n", learning_rate);
+    printf("\n");
+
+    printf("-----------------------------------------------\n");
+    printf("\n");
+}
+
 void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
                  int num_epochs, int batch_size, float learning_rate,
                  bool rand_seed_rand) {
@@ -373,6 +408,7 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
     float test_accuracy = 0.f;
 
     // gradient descent (batched)
+    // note: leaves out training samples at the end of an epoch that don't fit into a batch
     for (int i = 0; i < num_iterations; i++) {
         // per epoch
         if (i % epoch_iters == 0 ) {
@@ -416,14 +452,17 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
 
         // accuracy update
         if (i % TRAIN_UPDATE_FREQ == 0) {
+            // calculate training accuracy
+            // note: evaluates on predictions from previous iteration before latest parameter update
+            train_accuracy = get_accuracy(&MLP, batch_Y, batch_size, TRAIN);
+
+            print_model_header(&MLP,
+                               num_epochs, batch_size, learning_rate);
+
             printf("Epoch: %d\n", i / epoch_iters);
             printf("Iteration: %d\n", i);
             
-            // calculate and print training accuracy
-            train_accuracy = get_accuracy(&MLP, batch_Y, batch_size, TRAIN);  // evaluates on predictions from previous iteration before latest parameter update
             printf("Training accuracy: %.4f\n", train_accuracy);
-
-            // print test accuracy
             printf("Most recent test accuracy: %.4f\n", test_accuracy);
 
             printf("\n");
@@ -434,7 +473,10 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
 
     // calculate and print final test accuracy
     test_accuracy = get_test_accuracy(&MLP);
+    print_model_header(&MLP,
+                       num_epochs, batch_size, learning_rate);
     printf("Final test accuracy: %.4f\n", test_accuracy);
+    printf("\n");
 
     // free memory
 
@@ -443,4 +485,5 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
     free(one_hot_batch_Y);
 
     free_MLP_MNIST(&MLP);
+
 }
