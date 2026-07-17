@@ -50,6 +50,8 @@ void init_data_MNIST(Dataset *train_set, Dataset *test_set,
     // TRAINING INPUT
     ////////////////////////////////////////////////////////////////////////////////
 
+    // note: training input is loaded sample-major
+
     FILE *train_input_file = fopen(train_input_path, "rb");
     if (!train_input_file) {
         printf("Error: Cannot open %s\n", train_input_path);
@@ -84,13 +86,13 @@ void init_data_MNIST(Dataset *train_set, Dataset *test_set,
     // set training set size
     *train_set_size = local_train_set_size;
 
-    // read in data
+    // read in data (sample-major)
     raw_bytes = malloc(total_elements * sizeof(unsigned char));
     num_read = fread(raw_bytes, sizeof(unsigned char), total_elements, train_input_file);
     check_read_error(num_read, total_elements, train_input_file);
     for (int i = 0; i < train_input_dim; i++) {
         for (int j = 0; j < local_train_set_size; j++) {
-            train_set->input[i * local_train_set_size + j] = (float)raw_bytes[j * train_input_dim + i] / 255.f;
+            train_set->input[j * train_input_dim + i] = (float)raw_bytes[j * train_input_dim + i] / 255.f;
         }
     }
 
@@ -177,7 +179,7 @@ void init_data_MNIST(Dataset *train_set, Dataset *test_set,
     // set test set size
     *test_set_size = local_test_set_size;
 
-    // read in data
+    // read in data (feature-major)
     raw_bytes = malloc(total_elements * sizeof(unsigned char));
     num_read = fread(raw_bytes, sizeof(unsigned char), total_elements, test_input_file);
     check_read_error(num_read, total_elements, test_input_file);

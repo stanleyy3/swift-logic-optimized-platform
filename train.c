@@ -379,6 +379,8 @@ static void print_model_header(Model *model,
     printf("\n");
 }
 
+// note: training set inputs are loaded sample-major, so it is transposed when writing into batch array
+//       test set inputs are loaded feature-major, so it is used for test accuracy without transposition
 void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
                  int num_epochs, int batch_size, float learning_rate,
                  bool rand_seed_rand) {
@@ -389,6 +391,7 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
         srand(42);
 
     Model MLP;
+    // note: training input is loaded sample-major
     new_MLP_MNIST(num_hidden_layers, hidden_layer_dims, batch_size, &MLP);
 
     int epoch_iters = MLP.tr_s_s / batch_size;
@@ -425,7 +428,7 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
 
             // load training image data
             for (int k = 0; k < MLP.i_d; k++) {
-                batch_X[k * batch_size + j] = MLP.train_data->input[k * MLP.tr_s_s + train_point_idx];
+                batch_X[k * batch_size + j] = MLP.train_data->input[train_point_idx * MLP.i_d + k];
             }
 
             // load training labels

@@ -37,6 +37,8 @@ typedef struct {
 /**
  * @brief Initializes and allocates memory for an MLP for MNIST
  * 
+ * - Note: training input is loaded sample-major
+ * 
  * @param[in]  num_hidden_layers Number of hidden layers
  * @param[in]  hidden_layer_dims Dimensions of hidden layers
  * @param[in]  batch_size        Size of batch
