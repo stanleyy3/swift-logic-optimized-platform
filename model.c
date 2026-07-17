@@ -34,6 +34,8 @@ void new_MLP_MNIST(int num_hidden_layers, int *hidden_layer_dims, int batch_size
     model->dBs = malloc(num_total_layers * sizeof(float *));
     model->dZs = malloc(num_total_layers * sizeof(float *));
 
+    int output_layer_fan_in = (model->n_h_l == 0) ? model->i_d : model->h_l_d[model->n_h_l-1];
+
     // allocate memory for weights for all layers
     for (int i = 0; i < model->n_h_l; i++) {
         int fan_in = (i == 0) ? model->i_d : model->h_l_d[i-1];
@@ -41,7 +43,7 @@ void new_MLP_MNIST(int num_hidden_layers, int *hidden_layer_dims, int batch_size
         model->Ws[i] = malloc(model->h_l_d[i] * fan_in * sizeof(float));  // allocate hidden weight matrices
     }
     model->Ws[model->n_h_l] = malloc(model->o_d
-                                     * model->h_l_d[model->n_h_l-1]
+                                     * output_layer_fan_in
                                      * sizeof(float));                    // allocate last weight matrix
 
     // allocate memory for biases for all layers
@@ -84,7 +86,7 @@ void new_MLP_MNIST(int num_hidden_layers, int *hidden_layer_dims, int batch_size
         model->dWs[i] = malloc(model->h_l_d[i] * fan_in * sizeof(float));  // allocate hidden weight gradient matrices
     }
     model->dWs[model->n_h_l] = malloc(model->o_d
-                                      * model->h_l_d[model->n_h_l-1]
+                                      * output_layer_fan_in
                                       * sizeof(float));                    // allocate last weight gradient matrix
 
     // allocate memory for bias gradients for all layers

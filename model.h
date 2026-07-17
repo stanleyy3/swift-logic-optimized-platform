@@ -2,10 +2,10 @@
  * model.h - Manages an MLP model's high-level data
  */
 
-#include "data_ops.h"
-
 #ifndef _MODEL_H_
 #define _MODEL_H_
+
+#include "data_ops.h"
 
 typedef struct {
     Dataset *train_data;  // each data point is a column

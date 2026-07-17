@@ -102,12 +102,24 @@ void relu_deriv(float *Z, int Z_m, int Z_n, float *Z_p) {
 }
 
 void softmax(float *Z, int Z_m, int Z_n, float *A) {
+    float *max_logit = malloc(Z_n * sizeof(float));
     float *norm_term = calloc(Z_n, sizeof(float));
+
+    // find max of each sample's output logits
+    for (int i = 0; i < Z_m; i++) {
+        for (int j = 0; j < Z_n; j++) {
+            if (i == 0) {
+                max_logit[j] = Z[j];
+            } else {
+                max_logit[j] = MAX(max_logit[j], Z[i * Z_n + j]);
+            }
+        }
+    }
 
     // compute exponentiated elements and accumulate sum
     for (int i = 0; i < Z_m; i++) {
         for (int j = 0; j < Z_n; j++ ) {
-            float exp_Z_i = expf(Z[i * Z_n + j]);
+            float exp_Z_i = expf(Z[i * Z_n + j] - max_logit[j]);  // subtract per-sample max logit for numerical stability
 
             A[i * Z_n + j] = exp_Z_i;
             norm_term[j] += exp_Z_i;
@@ -121,6 +133,7 @@ void softmax(float *Z, int Z_m, int Z_n, float *A) {
         }
     }
 
+    free(max_logit);
     free(norm_term);
 }
 

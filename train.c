@@ -47,7 +47,7 @@ static void init_weights_he(Model *model) {
         // He initialization uniform sampling boundary
         float b = sqrtf(6.f / fan_in);
 
-        float norm_factor = (1.f / RAND_MAX) * (2 * b);
+        float norm_factor = (float)(1.f / (double)RAND_MAX) * (2 * b);
 
         // sets each element of weight matrix
         for (int i = 0; i < fan_out; i++) {
@@ -68,13 +68,13 @@ static void init_weights_he(Model *model) {
  * @param[in, out] model Model whose output layer weights are to be initialized
  */
 static void init_weights_xavier(Model *model) {
-    int fan_in = model->h_l_d[model->n_h_l-1];
+    int fan_in = (model->n_h_l == 0) ? model->i_d : model->h_l_d[model->n_h_l-1];
     int fan_out = model->o_d;
 
     // Xavier initialization uniform sampling boundary
     float b = sqrtf(6.f / (fan_in + fan_out));
 
-    float norm_factor = (1.f / RAND_MAX) * (2 * b);
+    float norm_factor = (float)(1.f / (double)RAND_MAX) * (2 * b);
 
     // sets each element of weight matrix
     for (int i = 0; i < fan_out; i++) {
@@ -346,9 +346,12 @@ static float get_test_accuracy(Model *model) {
 
 void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
                  int num_epochs, int batch_size, float learning_rate,
-                 bool seed_rand) {
+                 bool rand_seed_rand) {
 
-    if (seed_rand) srand(time(NULL));
+    if (rand_seed_rand)
+        srand(time(NULL));
+    else
+        srand(42);
 
     Model MLP;
     new_MLP_MNIST(num_hidden_layers, hidden_layer_dims, batch_size, &MLP);
@@ -405,20 +408,22 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
         // update params
         update_params(&MLP, learning_rate);
 
+        // test accuracy update
+        if (i % epoch_iters == 0) {
+            // calculate test accuracy
+            test_accuracy = get_test_accuracy(&MLP);
+        }
+
         // accuracy update
         if (i % TRAIN_UPDATE_FREQ == 0) {
             printf("Epoch: %d\n", i / epoch_iters);
             printf("Iteration: %d\n", i);
             
             // calculate and print training accuracy
-            train_accuracy = get_accuracy(&MLP, batch_Y, batch_size, TRAIN);
+            train_accuracy = get_accuracy(&MLP, batch_Y, batch_size, TRAIN);  // evaluates on predictions from previous iteration before latest parameter update
             printf("Training accuracy: %.4f\n", train_accuracy);
 
-            // test accuracy update
-            if (i % epoch_iters == 0) {
-                // calculate and print test accuracy
-                test_accuracy = get_test_accuracy(&MLP);
-            }
+            // print test accuracy
             printf("Most recent test accuracy: %.4f\n", test_accuracy);
 
             printf("\n");

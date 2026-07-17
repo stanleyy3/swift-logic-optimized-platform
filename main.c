@@ -17,13 +17,15 @@ int main(int argc, char *argv[]) {
     memcpy(hidden_layer_dims, (int[]){10}, num_hidden_layers * sizeof(int));
 
     int num_epochs = 50;
-    int batch_size = 1000;
+    int batch_size = 1000;  // constrain to evenly divide training set size (60000 for MNIST)
     float learning_rate = 0.1f;
+
+    bool rand_seed_rand = false;
 
     // launch a training run
     train_MNIST(num_hidden_layers, hidden_layer_dims,
                 num_epochs, batch_size, learning_rate,
-                false);
+                rand_seed_rand);
 
     free(hidden_layer_dims);
 

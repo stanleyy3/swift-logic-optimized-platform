@@ -60,6 +60,10 @@ void init_data_MNIST(Dataset *train_set, Dataset *test_set,
     num_read = fread(magic_bytes, sizeof(unsigned char), 4, train_input_file);
     check_read_error(num_read, 4, train_input_file);
     num_dims = magic_bytes[3];
+    if (!(num_dims > 0)) {
+        printf("Not enough dimensions.\n");
+        exit(1);
+    }
 
     // get dimension sizes
     dims = malloc(num_dims * sizeof(uint32_t));
@@ -68,11 +72,17 @@ void init_data_MNIST(Dataset *train_set, Dataset *test_set,
 
     // calculate number of total elements
     int local_train_set_size = swap_endian32(dims[0]);
-    int train_input_dim = (int)(swap_endian32(dims[1]) * swap_endian32(dims[2]));
+    int train_input_dim = 1;
+    for (int i = 1; i < num_dims; i++) {
+        train_input_dim *= (int)swap_endian32(dims[i]);
+    }
     total_elements = local_train_set_size * train_input_dim;
 
     // allocate training input memory
     train_set->input = malloc(total_elements * sizeof(float));
+
+    // set training set size
+    *train_set_size = local_train_set_size;
 
     // read in data
     raw_bytes = malloc(total_elements * sizeof(unsigned char));
@@ -108,15 +118,14 @@ void init_data_MNIST(Dataset *train_set, Dataset *test_set,
     num_read = fread(dims, sizeof(uint32_t), num_dims, train_labels_file);
     check_read_error(num_read, num_dims, train_labels_file);
 
-    // calculate number of total elements and allocate training label memory
+    // calculate number of total elements
     total_elements = 1;
     for (int i = 0; i < num_dims; i++) {
         total_elements *= swap_endian32(dims[i]);
     }
-    train_set->labels = malloc(total_elements * sizeof(int));
 
-    // set training set size
-    *train_set_size = total_elements;
+    // allocate training label memory
+    train_set->labels = malloc(total_elements * sizeof(int));
 
     // read in data
     raw_bytes = malloc(total_elements * sizeof(unsigned char));
@@ -144,6 +153,10 @@ void init_data_MNIST(Dataset *train_set, Dataset *test_set,
     num_read = fread(magic_bytes, sizeof(unsigned char), 4, test_input_file);
     check_read_error(num_read, 4, test_input_file);
     num_dims = magic_bytes[3];
+    if (!(num_dims > 0)) {
+        printf("Not enough dimensions.\n");
+        exit(1);
+    }
 
     // get dimension sizes
     dims = malloc(num_dims * sizeof(uint32_t));
@@ -152,11 +165,17 @@ void init_data_MNIST(Dataset *train_set, Dataset *test_set,
 
     // calculate number of total elements
     int local_test_set_size = swap_endian32(dims[0]);
-    int test_input_dim = (int)(swap_endian32(dims[1]) * swap_endian32(dims[2]));
+    int test_input_dim = 1;
+    for (int i = 1; i < num_dims; i++) {
+        test_input_dim *= (int)swap_endian32(dims[i]);
+    }
     total_elements = local_test_set_size * test_input_dim;
 
     // allocate test input memory
     test_set->input = malloc(total_elements * sizeof(float));
+
+    // set test set size
+    *test_set_size = local_test_set_size;
 
     // read in data
     raw_bytes = malloc(total_elements * sizeof(unsigned char));
@@ -192,15 +211,14 @@ void init_data_MNIST(Dataset *train_set, Dataset *test_set,
     num_read = fread(dims, sizeof(uint32_t), num_dims, test_labels_file);
     check_read_error(num_read, num_dims, test_labels_file);
 
-    // calculate number of total elements and allocate test label memory
+    // calculate number of total elements
     total_elements = 1;
     for (int i = 0; i < num_dims; i++) {
         total_elements *= swap_endian32(dims[i]);
     }
-    test_set->labels = malloc(total_elements * sizeof(int));
 
-    // set test set size
-    *test_set_size = total_elements;
+    // allocate test label memory
+    test_set->labels = malloc(total_elements * sizeof(int));
 
     // read in data
     raw_bytes = malloc(total_elements * sizeof(unsigned char));
