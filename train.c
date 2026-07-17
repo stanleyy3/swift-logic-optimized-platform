@@ -375,7 +375,7 @@ static void print_model_header(Model *model,
     printf("Learning rate: %.2f\n", learning_rate);
     printf("\n");
 
-    printf("-----------------------------------------------\n");
+    printf("--------------------------------------------------------------\n");
     printf("\n");
 }
 

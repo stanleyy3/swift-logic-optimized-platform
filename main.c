@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
         time_t end = time(NULL);
 
         // calculate and print elapsed execution time for training run
-        printf("Elapsed time: %.0f seconds\n", difftime(end, start));
+        printf("Elapsed time: ~%.0f seconds\n", difftime(end, start));
         printf("\n");
 
         free(hidden_layer_dims);
@@ -141,6 +141,9 @@ int main(int argc, char *argv[]) {
         // get whether to continue
         int ret;
         do {
+            printf("--------------------------------------------------------------\n");
+            printf("\n");
+
             printf("Would you like to launch another training run (1 (for yes), 0 (for no)): ");
 
             ret = scanf("%d", &user_continue);
