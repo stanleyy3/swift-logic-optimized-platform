@@ -12,6 +12,8 @@
 /**
  * @brief Trains a basic MLP for MNIST end-to-end
  * 
+ * - Gives training and test loss updates
+ * 
  * @param[in] num_hidden_layers Number of hidden layers
  * @param[in] hidden_layer_dims Dimensions of hidden layers
  * @param[in] num_epochs        Number of epochs

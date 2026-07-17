@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "train.h"
 
@@ -119,10 +120,20 @@ int main(int argc, char *argv[]) {
                         &num_epochs, &batch_size,
                         &learning_rate);
 
+        printf("Launching training run...\n");
+
+        time_t start = time(NULL);
+
         // launch a training run
         train_MNIST(num_hidden_layers, hidden_layer_dims,
                     num_epochs, batch_size, learning_rate,
                     RAND_SEED_RAND);
+
+        time_t end = time(NULL);
+
+        // calculate and print elapsed execution time for training run
+        printf("Elapsed time: %.0f seconds\n", difftime(end, start));
+        printf("\n");
 
         free(hidden_layer_dims);
 
