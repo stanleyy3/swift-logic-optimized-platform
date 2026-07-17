@@ -1,5 +1,7 @@
 /**
  * data_ops.c - Management of data
+ * 
+ * Loading and manipulation of data for the model
  */
 
 #include "data_ops.h"
@@ -16,6 +18,8 @@ static void check_read_error(size_t num_read, size_t count, FILE *stream) {
         } else if (feof(stream)) {
             printf("End of file reached.\n");
         }
+
+        exit(1);
     }
 }
 
@@ -26,8 +30,8 @@ static uint32_t swap_endian32(uint32_t val) {
            | (val >> 24);
 }
 
-void load_mnist(float *train_input, int *train_labels,
-                float *test_input, int *test_labels) {
+void init_data_MNIST(Dataset *train_set, Dataset *test_set,
+                     int *train_set_size, int *test_set_size) {
 
     char *train_input_path = "data/mnist/train-images.idx3-ubyte";
     char *train_labels_path = "data/mnist/train-labels.idx1-ubyte";
@@ -37,7 +41,7 @@ void load_mnist(float *train_input, int *train_labels,
     unsigned char magic_bytes[4];
     int num_dims;
     uint32_t *dims;
-    size_t total_elements;
+    int total_elements;
     unsigned char *raw_bytes;
 
     size_t num_read;
@@ -63,17 +67,21 @@ void load_mnist(float *train_input, int *train_labels,
     check_read_error(num_read, num_dims, train_input_file);
 
     // calculate number of total elements
-    total_elements = 1;
-    for (int i = 0; i < num_dims; i++) {
-        total_elements *= swap_endian32(dims[i]);
-    }
+    int local_train_set_size = swap_endian32(dims[0]);
+    int train_input_dim = (int)(swap_endian32(dims[1]) * swap_endian32(dims[2]));
+    total_elements = local_train_set_size * train_input_dim;
+
+    // allocate training input memory
+    train_set->input = malloc(total_elements * sizeof(float));
 
     // read in data
     raw_bytes = malloc(total_elements * sizeof(unsigned char));
     num_read = fread(raw_bytes, sizeof(unsigned char), total_elements, train_input_file);
     check_read_error(num_read, total_elements, train_input_file);
-    for (size_t i = 0; i < total_elements; i++) {
-        train_input[i] = (float)raw_bytes[i] / 255.f;
+    for (int i = 0; i < train_input_dim; i++) {
+        for (int j = 0; j < local_train_set_size; j++) {
+            train_set->input[i * local_train_set_size + j] = (float)raw_bytes[j * train_input_dim + i] / 255.f;
+        }
     }
 
     fclose(train_input_file);
@@ -100,18 +108,22 @@ void load_mnist(float *train_input, int *train_labels,
     num_read = fread(dims, sizeof(uint32_t), num_dims, train_labels_file);
     check_read_error(num_read, num_dims, train_labels_file);
 
-    // calculate number of total elements
+    // calculate number of total elements and allocate training label memory
     total_elements = 1;
     for (int i = 0; i < num_dims; i++) {
         total_elements *= swap_endian32(dims[i]);
     }
+    train_set->labels = malloc(total_elements * sizeof(int));
+
+    // set training set size
+    *train_set_size = total_elements;
 
     // read in data
     raw_bytes = malloc(total_elements * sizeof(unsigned char));
     num_read = fread(raw_bytes, sizeof(unsigned char), total_elements, train_labels_file);
     check_read_error(num_read, total_elements, train_labels_file);
-    for (size_t i = 0; i < total_elements; i++) {
-        train_labels[i] = (int)raw_bytes[i];
+    for (int i = 0; i < total_elements; i++) {
+        train_set->labels[i] = (int)raw_bytes[i];
     }
 
     fclose(train_labels_file);
@@ -139,17 +151,21 @@ void load_mnist(float *train_input, int *train_labels,
     check_read_error(num_read, num_dims, test_input_file);
 
     // calculate number of total elements
-    total_elements = 1;
-    for (int i = 0; i < num_dims; i++) {
-        total_elements *= swap_endian32(dims[i]);
-    }
+    int local_test_set_size = swap_endian32(dims[0]);
+    int test_input_dim = (int)(swap_endian32(dims[1]) * swap_endian32(dims[2]));
+    total_elements = local_test_set_size * test_input_dim;
+
+    // allocate test input memory
+    test_set->input = malloc(total_elements * sizeof(float));
 
     // read in data
     raw_bytes = malloc(total_elements * sizeof(unsigned char));
     num_read = fread(raw_bytes, sizeof(unsigned char), total_elements, test_input_file);
-    check_read_error(num_dims, total_elements, test_input_file);
-    for (size_t i = 0; i < total_elements; i++) {
-        test_input[i] = (float)raw_bytes[i] / 255.f;
+    check_read_error(num_read, total_elements, test_input_file);
+    for (int i = 0; i < test_input_dim; i++) {
+        for (int j = 0; j < local_test_set_size; j++) {
+            test_set->input[i * local_test_set_size + j] = (float)raw_bytes[j * test_input_dim + i] / 255.f;
+        }
     }
 
     fclose(test_input_file);
@@ -176,24 +192,35 @@ void load_mnist(float *train_input, int *train_labels,
     num_read = fread(dims, sizeof(uint32_t), num_dims, test_labels_file);
     check_read_error(num_read, num_dims, test_labels_file);
 
-    // calculate number of total elements
+    // calculate number of total elements and allocate test label memory
     total_elements = 1;
     for (int i = 0; i < num_dims; i++) {
         total_elements *= swap_endian32(dims[i]);
     }
+    test_set->labels = malloc(total_elements * sizeof(int));
+
+    // set test set size
+    *test_set_size = total_elements;
 
     // read in data
     raw_bytes = malloc(total_elements * sizeof(unsigned char));
     num_read = fread(raw_bytes, sizeof(unsigned char), total_elements, test_labels_file);
     check_read_error(num_read, total_elements, test_labels_file);
-    for (size_t i = 0; i < total_elements; i++) {
-        test_labels[i] = (int)raw_bytes[i];
+    for (int i = 0; i < total_elements; i++) {
+        test_set->labels[i] = (int)raw_bytes[i];
     }
 
     fclose(test_labels_file);
     free(dims);
     free(raw_bytes);
     
+}
+
+void free_data_set(Dataset *dataset) {
+    free(dataset->input);
+    free(dataset->labels);
+
+    free(dataset);
 }
 
 void shuffle(int *A, int N) {

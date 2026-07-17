@@ -2,8 +2,8 @@
  * mat_ops.h - Basic matrix and linear operations
  */
 
-#ifndef MAT_OPS
-#define MAT_OPS
+#ifndef _MAT_OPS_H_
+#define _MAT_OPS_H_
 
 /**
  * @brief Computes `C` := `A` @ `B`
@@ -100,5 +100,45 @@ void transpose(float *A, int A_m, int A_n, float *A_T);
  * @param[out] B   Output matrix
  */
 void row_sum(float *A, int A_m, int A_n, float *B);
+
+/**
+ * @brief Computes ReLU for each element of `Z`
+ * 
+ * @param[in]  Z   Weighted sums of layer
+ * @param[in]  Z_m Dimension of layer
+ * @param[in]  Z_n Batch size
+ * @param[out] A   ReLU activations of layer
+ */
+void relu(float *Z, int Z_m, int Z_n, float *A);
+
+/**
+ * @brief Computes ReLU derivative for each element of `Z`
+ * 
+ * @param[in]  Z   Input matrix
+ * @param[in]  Z_m Dimension of layer
+ * @param[in]  Z_n Batch size
+ * @param[out] Z_p Output matrix
+ */
+void relu_deriv(float *Z, int Z_m, int Z_n, float *Z_p);
+
+/**
+ * @brief Computes softmax for each element of `Z`
+ * 
+ * @param[in]  Z   Weighted sums of layer
+ * @param[in]  Z_m Dimension of layer
+ * @param[in]  Z_n Batch size
+ * @param[out] A   Softmax activations of layer
+ */
+void softmax(float *Z, int Z_m, int Z_n, float *A);
+
+/**
+ * @brief Creates a batch one-hot encoding of a batch's labels
+ * 
+ * @param[in]  Y          Labels
+ * @param[in]  dim        Dimension of output layer
+ * @param[in]  batch_size Size of training batch
+ * @param[out] one_hot_Y  One-hot encoding of `Y`
+ */
+void one_hot(int *Y, int dim, int batch_size, float *one_hot_Y);
 
 #endif

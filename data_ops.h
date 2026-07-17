@@ -1,20 +1,37 @@
 /**
  * data_ops.h - Management of data
+ * 
+ * Loading and manipulation of data for the model
  */
 
-#ifndef DATA_OPS
-#define DATA_OPS
+#ifndef _DATA_OPS_H_
+#define _DATA_OPS_H_
+
+typedef struct {
+    float *input;
+    int *labels;
+} Dataset;
 
 /**
- * @brief Loads the MNIST dataset into arrays
+ * @brief Allocates memory for training and test sets and loads the MNIST
+ * dataset into them
  * 
- * @param[out] train_input  Array for training image data
- * @param[out] train_labels Array for training labels
- * @param[out] test_input   Array for test image data
- * @param[out] test_labels  Array for test labels
+ * - Caller owns the allocated memory
+ * 
+ * @param[out] train_set      Training set
+ * @param[out] test_set       Test set
+ * @param[out] train_set_size Size of training set
+ * @param[out] test_set_size  Size of test set
  */
-void load_mnist(float *train_input, int *train_labels,
-                float *test_input, int *test_labels);
+void init_data_MNIST(Dataset *train_set, Dataset *test_set,
+                     int *train_set_size, int *test_set_size);
+
+/**
+ * @brief Frees memory allocated for dataset
+ * 
+ * @param[in] dataset Dataset to be freed
+ */
+void free_data_set(Dataset *dataset);
 
 /**
  * @brief Shuffles elements of an array

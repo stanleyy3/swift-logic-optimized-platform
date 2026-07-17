@@ -4,6 +4,12 @@
 
 #include "mat_ops.h"
 
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 void mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C) {
     // loop across C's elements
     for (int i = 0; i < A_m; i++) {
@@ -75,5 +81,53 @@ void row_sum(float *A, int A_m, int A_n, float *B) {
         }
 
         B[i] = acc;
+    }
+}
+
+void relu(float *Z, int Z_m, int Z_n, float *A) {
+    for (int i = 0; i < Z_m; i++) {
+        for (int j = 0; j < Z_n; j++) {
+            A[i * Z_n + j] = MAX(0, Z[i * Z_n + j]);
+        }
+    }
+}
+
+void relu_deriv(float *Z, int Z_m, int Z_n, float *Z_p) {
+    // loop over Z_p's elements
+    for (int i = 0; i < Z_m; i++) {
+        for (int j = 0; j < Z_n; j++) {
+            Z_p[i * Z_n + j] = (float)(Z[i * Z_n + j] > 0);
+        }
+    }
+}
+
+void softmax(float *Z, int Z_m, int Z_n, float *A) {
+    float *norm_term = calloc(Z_n, sizeof(float));
+
+    // compute exponentiated elements and accumulate sum
+    for (int i = 0; i < Z_m; i++) {
+        for (int j = 0; j < Z_n; j++ ) {
+            float exp_Z_i = expf(Z[i * Z_n + j]);
+
+            A[i * Z_n + j] = exp_Z_i;
+            norm_term[j] += exp_Z_i;
+        }
+    }
+
+    // normalize each exponentiated element
+    for (int i = 0; i < Z_m; i++) {
+        for (int j = 0; j < Z_n; j++) {
+            A[i * Z_n + j] = A[i * Z_n + j] / norm_term[j];
+        }
+    }
+
+    free(norm_term);
+}
+
+void one_hot(int *Y, int dim, int batch_size, float *one_hot_Y) {
+    memset(one_hot_Y, 0, dim * batch_size * sizeof(float));
+
+    for (int i = 0; i < batch_size; i++) {
+        one_hot_Y[Y[i] * batch_size + i] = 1.f;
     }
 }
