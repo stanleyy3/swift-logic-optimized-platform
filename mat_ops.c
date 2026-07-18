@@ -8,12 +8,14 @@
 #include <string.h>
 #include <math.h>
 
-#define TILE_DIM 16
+#define TILE_DIM 32
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-void naive_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C) {
+void naive_mat_mat_mul(float *A, float *B,
+                       int A_m, int A_n, int B_n,
+                       float *C) {
     // loop across C's elements
     for (int i = 0; i < A_m; i++) {
         for (int j = 0; j < B_n; j++) {
@@ -34,7 +36,11 @@ void naive_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C) 
  * 
  * - `A`, `B`, and `C` are "tile"s of larger matrices
  * 
+ * - `C` cannot be one of `A` or `B`
+ * 
  * - accumulates directly into "tile" C
+ * 
+ * - optimized for compiler vectorization
  * 
  * @param[in]  A        First input "tile" (whose address is within larger matrix)
  * @param[in]  B        Second input "tile" (whose address is within larger matrix)
@@ -46,27 +52,26 @@ void naive_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C) 
  * @param[in]  B_n      Number of columsn in larger matrix `B`
  * @param[out] C        Ouput "tile" (whose address is within larger matrix)
  */
-static void mini_mat_mat_mul(float *A, float *B,
+static void mini_mat_mat_mul(float *restrict A, float *restrict B,
                              int tile_A_m, int tile_A_n, int tile_B_n,
                              int A_n, int B_n,
-                             float *C) {
-    // loop across C's elements
+                             float *restrict C) {
+    // loop across A's elements
     for (int i = 0; i < tile_A_m; i++) {
-        for (int j = 0; j < tile_B_n; j++) {
-            float acc = 0.f;
+        for (int k = 0; k < tile_A_n; k++) {
+            float A_i_k = A[i * A_n + k];
 
-            // loop across C_i,j's constituents
-            for (int k = 0; k < tile_A_n; k++) {
-                acc += A[i * A_n + k] * B[k * B_n + j];
+            // loop across B's columns
+            for (int j = 0; j < tile_B_n; j++) {
+                C[i * B_n + j] += A_i_k * B[k * B_n + j];
             }
-
-            // accumulate into "tile" C
-            C[i * B_n + j] += acc;
         }
     }
 }
 
-void tiled_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C) {
+void tiled_mat_mat_mul(float *restrict A, float *restrict B,
+                       int A_m, int A_n, int B_n,
+                       float *restrict C) {
     // zero-initialize C to be accumulated into
     memset(C, 0, A_m * B_n * sizeof(float));
 
@@ -93,7 +98,9 @@ void tiled_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C) 
     }
 }
 
-void scal_mat_mul(float a, float *B, int B_m, int B_n, float *C) {
+void scal_mat_mul(float a, float *B,
+                  int B_m, int B_n,
+                  float *C) {
     // loop across C's elements
     for (int i = 0; i < B_m; i++){
         for (int j = 0; j < B_n; j++) {
@@ -102,7 +109,9 @@ void scal_mat_mul(float a, float *B, int B_m, int B_n, float *C) {
     }
 }
 
-void mat_vec_add_broadcast(float *A, float *B, int A_m, int A_n, float *C) {
+void mat_vec_add_broadcast(float *A, float *B,
+                           int A_m, int A_n,
+                           float *C) {
     // loop across C's elements
     for (int i = 0; i < A_m; i++) {
         for (int j = 0; j < A_n; j++) {
@@ -111,7 +120,9 @@ void mat_vec_add_broadcast(float *A, float *B, int A_m, int A_n, float *C) {
     }
 }
 
-void mat_sub(float *A, float *B, int m, int n, float *C) {
+void mat_sub(float *A, float *B,
+             int m, int n,
+             float *C) {
     // loop across C's elements
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
@@ -120,7 +131,9 @@ void mat_sub(float *A, float *B, int m, int n, float *C) {
     }
 }
 
-void hadamard_product(float *A, float *B, int m, int n, float *C) {
+void hadamard_product(float *A, float *B,
+                      int m, int n,
+                      float *C) {
     // loop over C's elements
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
@@ -129,7 +142,9 @@ void hadamard_product(float *A, float *B, int m, int n, float *C) {
     }
 }
 
-void transpose(float *A, int A_m, int A_n, float *A_T) {
+void transpose(float *A,
+               int A_m, int A_n,
+               float *A_T) {
     // loop across A's elements
     for (int i = 0; i < A_m; i++) {
         for (int j = 0; j < A_n; j++) {
@@ -138,7 +153,9 @@ void transpose(float *A, int A_m, int A_n, float *A_T) {
     }
 }
 
-void row_sum(float *A, int A_m, int A_n, float *B) {
+void row_sum(float *A,
+             int A_m, int A_n,
+             float *B) {
     // loop across B's elements
     for (int i = 0; i < A_m; i++) {
         float acc = 0.f;
@@ -151,7 +168,9 @@ void row_sum(float *A, int A_m, int A_n, float *B) {
     }
 }
 
-void relu(float *Z, int Z_m, int Z_n, float *A) {
+void relu(float *Z,
+          int Z_m, int Z_n,
+          float *A) {
     for (int i = 0; i < Z_m; i++) {
         for (int j = 0; j < Z_n; j++) {
             A[i * Z_n + j] = MAX(0, Z[i * Z_n + j]);
@@ -159,7 +178,9 @@ void relu(float *Z, int Z_m, int Z_n, float *A) {
     }
 }
 
-void relu_deriv(float *Z, int Z_m, int Z_n, float *Z_p) {
+void relu_deriv(float *Z,
+                int Z_m, int Z_n,
+                float *Z_p) {
     // loop over Z_p's elements
     for (int i = 0; i < Z_m; i++) {
         for (int j = 0; j < Z_n; j++) {
@@ -168,7 +189,9 @@ void relu_deriv(float *Z, int Z_m, int Z_n, float *Z_p) {
     }
 }
 
-void softmax(float *Z, int Z_m, int Z_n, float *A) {
+void softmax(float *Z,
+             int Z_m, int Z_n,
+             float *A) {
     float *max_logit = malloc(Z_n * sizeof(float));
     float *norm_term = calloc(Z_n, sizeof(float));
 
@@ -204,7 +227,9 @@ void softmax(float *Z, int Z_m, int Z_n, float *A) {
     free(norm_term);
 }
 
-void one_hot(int *Y, int dim, int batch_size, float *one_hot_Y) {
+void one_hot(int *Y,
+             int dim, int batch_size,
+             float *one_hot_Y) {
     memset(one_hot_Y, 0, dim * batch_size * sizeof(float));
 
     for (int i = 0; i < batch_size; i++) {

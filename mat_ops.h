@@ -20,7 +20,9 @@
  * @param[in]  B_n Number of columns in `B`
  * @param[out] C   Output matrix
  */
-void naive_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C);
+void naive_mat_mat_mul(float *A, float *B,
+                       int A_m, int A_n, int B_n,
+                       float *C);
 
 /**
  * @brief Computes `C` := `A` @ `B` (with tiling)
@@ -37,7 +39,9 @@ void naive_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C);
  * @param[in]  B_n Number of columns in `B`
  * @param[out] C   Output matrix
  */
-void tiled_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C);
+void tiled_mat_mat_mul(float *restrict A, float *restrict B,
+                       int A_m, int A_n, int B_n,
+                       float *restrict C);
 
 /**
  * @brief Computes `C` := `a` * `B`
@@ -52,7 +56,9 @@ void tiled_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C);
  * @param[in]  B_n Number of columns in `B`
  * @param[out] C   Output matrix
  */
-void scal_mat_mul(float a, float *B, int B_m, int B_n, float *C);
+void scal_mat_mul(float a, float *B,
+                  int B_m, int B_n,
+                  float *C);
 
 /**
  * @brief Computes `C` := `A` + `B` (broadcast)
@@ -69,7 +75,9 @@ void scal_mat_mul(float a, float *B, int B_m, int B_n, float *C);
  * @param[in]  A_n Number of columns in `A`
  * @param[out] C   Output vector
  */
-void mat_vec_add_broadcast(float *A, float *B, int A_m, int A_n, float *C);
+void mat_vec_add_broadcast(float *A, float *B,
+                           int A_m, int A_n,
+                           float *C);
 
 /**
  * @brief Computes `C` := `A` - `B`
@@ -81,7 +89,9 @@ void mat_vec_add_broadcast(float *A, float *B, int A_m, int A_n, float *C);
  * @param[in]  m Number of elements in `A` and `B`
  * @param[out] C Output vector
  */
-void mat_sub(float *A, float *B, int m, int n, float *C);
+void mat_sub(float *A, float *B,
+             int m, int n,
+             float *C);
 
 /**
  * @brief Computes `C` := hadamard product of `A` and `B`
@@ -94,7 +104,9 @@ void mat_sub(float *A, float *B, int m, int n, float *C);
  * @param[in]  n Number of columns in `A` and `B`
  * @param[out] C Output matrix
  */
-void hadamard_product(float *A, float *B, int m, int n, float *C);
+void hadamard_product(float *A, float *B,
+                      int m, int n,
+                      float *C);
 
 /**
  * @brief Computes `A_T` := `A`^T
@@ -106,7 +118,9 @@ void hadamard_product(float *A, float *B, int m, int n, float *C);
  * @param[in]  A_n Number of columns in `A`
  * @param[out] A_T Output matrix
  */
-void transpose(float *A, int A_m, int A_n, float *A_T);
+void transpose(float *A,
+               int A_m, int A_n,
+               float *A_T);
 
 /**
  * @brief Computes `B` := row-sum of `A`
@@ -116,7 +130,9 @@ void transpose(float *A, int A_m, int A_n, float *A_T);
  * @param[in]  A_n Number of columns in `A`
  * @param[out] B   Output matrix
  */
-void row_sum(float *A, int A_m, int A_n, float *B);
+void row_sum(float *A,
+             int A_m, int A_n,
+             float *B);
 
 /**
  * @brief Computes ReLU for each element of `Z`
@@ -126,7 +142,9 @@ void row_sum(float *A, int A_m, int A_n, float *B);
  * @param[in]  Z_n Batch size
  * @param[out] A   ReLU activations of layer
  */
-void relu(float *Z, int Z_m, int Z_n, float *A);
+void relu(float *Z,
+          int Z_m, int Z_n,
+          float *A);
 
 /**
  * @brief Computes ReLU derivative for each element of `Z`
@@ -136,7 +154,9 @@ void relu(float *Z, int Z_m, int Z_n, float *A);
  * @param[in]  Z_n Batch size
  * @param[out] Z_p Output matrix
  */
-void relu_deriv(float *Z, int Z_m, int Z_n, float *Z_p);
+void relu_deriv(float *Z,
+                int Z_m, int Z_n,
+                float *Z_p);
 
 /**
  * @brief Computes softmax for each element of `Z`
@@ -146,7 +166,9 @@ void relu_deriv(float *Z, int Z_m, int Z_n, float *Z_p);
  * @param[in]  Z_n Batch size
  * @param[out] A   Softmax activations of layer
  */
-void softmax(float *Z, int Z_m, int Z_n, float *A);
+void softmax(float *Z,
+             int Z_m, int Z_n,
+             float *A);
 
 /**
  * @brief Creates a batch one-hot encoding of a batch's labels
@@ -156,6 +178,8 @@ void softmax(float *Z, int Z_m, int Z_n, float *A);
  * @param[in]  batch_size Size of training batch
  * @param[out] one_hot_Y  One-hot encoding of `Y`
  */
-void one_hot(int *Y, int dim, int batch_size, float *one_hot_Y);
+void one_hot(int *Y,
+             int dim, int batch_size,
+             float *one_hot_Y);
 
 #endif

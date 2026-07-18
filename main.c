@@ -94,7 +94,7 @@ static void get_hyperparams(int *num_hidden_layers, int **hidden_layer_dims,
     printf("\n");
 }
 
-int main(int argc, char *argv[]) {
+int main() {
     // hyperparameters
 
     int num_hidden_layers;
