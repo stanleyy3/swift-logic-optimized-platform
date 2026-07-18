@@ -122,20 +122,20 @@ static void batch_forward_prop(Model *model, float *batch_X, int batch_size) {
         float *layer_inputs = (L == 0) ? batch_X : model->As[L-1];
 
         // compute pre-activations for layer
-        mat_mat_mul(model->Ws[L], layer_inputs,
-                   fan_out, fan_in, batch_size,
-                   model->Zs[L]);
-        mat_add_broadcast(model->Zs[L], model->Bs[L],
-                          fan_out,
-                          batch_size,
+        tiled_mat_mat_mul(model->Ws[L], layer_inputs,
+                          fan_out, fan_in, batch_size,
                           model->Zs[L]);
+        mat_vec_add_broadcast(model->Zs[L], model->Bs[L],
+                              fan_out,
+                              batch_size,
+                              model->Zs[L]);
 
         // compute activations for layer
         if (L != num_total_layers - 1) {
             // for hidden layer
             relu(model->Zs[L],
-                fan_out, batch_size,
-                model->As[L]);
+                 fan_out, batch_size,
+                 model->As[L]);
         } else {
             // for output layer
             softmax(model->Zs[model->n_h_l],
@@ -175,9 +175,9 @@ static void batch_back_prop(Model *model, float *batch_X, float *one_hot_batch_Y
         transpose(layer_inputs,
                   fan_in, batch_size,
                   layer_inputs_T);
-        mat_mat_mul(model->dZs[L], layer_inputs_T,
-                    fan_out, batch_size, fan_in,
-                    model->dWs[L]);
+        tiled_mat_mat_mul(model->dZs[L], layer_inputs_T,
+                          fan_out, batch_size, fan_in,
+                          model->dWs[L]);
         scal_mat_mul(batch_size_inv, model->dWs[L],
                      fan_out, fan_in,
                      model->dWs[L]);
@@ -200,9 +200,9 @@ static void batch_back_prop(Model *model, float *batch_X, float *one_hot_batch_Y
             transpose(model->Ws[L],
                       fan_out, fan_in,
                       W_T);
-            mat_mat_mul(W_T, model->dZs[L],
-                        fan_in, fan_out, batch_size,
-                        model->dZs[L-1]);
+            tiled_mat_mat_mul(W_T, model->dZs[L],
+                              fan_in, fan_out, batch_size,
+                              model->dZs[L-1]);
             relu_deriv(model->Zs[L-1],
                        fan_in, batch_size,
                        Z_p);
@@ -302,19 +302,19 @@ static void test_forward_prop(Model *model, float *X) {
         float *layer_inputs = (L == 0) ? X : model->As_test[L-1];
 
         // compute pre-activations for layer
-        mat_mat_mul(model->Ws[L], layer_inputs,
-                   fan_out, fan_in, model->te_s_s,
-                   model->Zs_test[L]);
-        mat_add_broadcast(model->Zs_test[L], model->Bs[L],
-                          fan_out, model->te_s_s,
+        tiled_mat_mat_mul(model->Ws[L], layer_inputs,
+                          fan_out, fan_in, model->te_s_s,
                           model->Zs_test[L]);
+        mat_vec_add_broadcast(model->Zs_test[L], model->Bs[L],
+                              fan_out, model->te_s_s,
+                              model->Zs_test[L]);
 
         // compute activations for layer
         if (L != num_total_layers - 1) {
             // for hidden layer
             relu(model->Zs_test[L],
-                fan_out, model->te_s_s,
-                model->As_test[L]);
+                 fan_out, model->te_s_s,
+                 model->As_test[L]);
         } else {
             // for output layer
             softmax(model->Zs_test[model->n_h_l],

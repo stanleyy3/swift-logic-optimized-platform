@@ -6,7 +6,7 @@
 #define _MAT_OPS_H_
 
 /**
- * @brief Computes `C` := `A` @ `B`
+ * @brief Computes `C` := `A` @ `B` (with naive loops)
  * 
  * - `B` is inferred to have `A_n` rows
  * 
@@ -20,7 +20,24 @@
  * @param[in]  B_n Number of columns in `B`
  * @param[out] C   Output matrix
  */
-void mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C);
+void naive_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C);
+
+/**
+ * @brief Computes `C` := `A` @ `B` (with tiling)
+ * 
+ * - `B` is inferred to have `A_n` rows
+ * 
+ * - `C` cannot be one of `A` or `B`
+ * 
+ * @param[in]  A   First input matrix
+ * @param[in]  B   Second input matrix
+ * @param[in]  A_m Number of rows in `A`
+ * @param[in]  A_n Number of columns in `A` (`B` is inferred to have
+ *                 the same number of rows)
+ * @param[in]  B_n Number of columns in `B`
+ * @param[out] C   Output matrix
+ */
+void tiled_mat_mat_mul(float *A, float *B, int A_m, int A_n, int B_n, float *C);
 
 /**
  * @brief Computes `C` := `a` * `B`
@@ -52,7 +69,7 @@ void scal_mat_mul(float a, float *B, int B_m, int B_n, float *C);
  * @param[in]  A_n Number of columns in `A`
  * @param[out] C   Output vector
  */
-void mat_add_broadcast(float *A, float *B, int A_m, int A_n, float *C);
+void mat_vec_add_broadcast(float *A, float *B, int A_m, int A_n, float *C);
 
 /**
  * @brief Computes `C` := `A` - `B`
