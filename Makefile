@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O3 -Wall -Wextra -MMD -MP
+CFLAGS = -fopenmp -O3 -Wall -Wextra -MMD -MP
 LDLIBS = -lm
 TARGET = train
 

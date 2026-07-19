@@ -8,7 +8,7 @@
 #include <string.h>
 #include <math.h>
 
-#define TILE_DIM 32
+#define TILE_DIM 40
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -80,6 +80,8 @@ void tiled_mat_mat_mul(float *restrict A, float *restrict B,
     int num_tiles_k = (A_n + TILE_DIM - 1) / TILE_DIM;
 
     // loop across C's tiles
+
+    #pragma omp parallel for collapse(2) schedule(static)
     for (int i = 0; i < num_tiles_i; i++) {
         for (int j = 0; j < num_tiles_j; j++) {
             // loop across C's tiled matmuls
