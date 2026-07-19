@@ -8,7 +8,7 @@
 #include <string.h>
 #include <math.h>
 
-#define TILE_DIM 40
+#define TILE_DIM 32
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))

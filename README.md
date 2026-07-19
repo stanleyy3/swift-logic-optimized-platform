@@ -64,3 +64,13 @@ Intel(R) Xeon(R) Gold 6248R CPU @ 3.00GHz (Andrew machines):
 | epochs: 20              |                     |
 |-------------------------|---------------------|
 ```
+
+## Other
+
+### Constrain OMP multi-threading for Cortex A53 core count
+
+```
+export OMP_NUM_THREADS=4
+export OMP_PLACES=cores
+export OMP_PROC_BIND=close
+```
