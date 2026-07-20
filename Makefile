@@ -8,6 +8,11 @@ ifeq ($(PROFILE), 1)
 CFLAGS += -g -pg
 endif
 
+# vectorization for Cortex A53
+ifeq ($(CORTEX), 1)
+CFLAGS += -mcpu=cortex-a53
+endif
+
 BUILD_DIR = build
 
 # get .o and .d dependencies
