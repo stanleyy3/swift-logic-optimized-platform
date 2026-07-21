@@ -10,8 +10,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-// 0 - MNIST, 1 - Fashion MNIST
-#define DATASET 1
+#include "config.h"
 
 static void check_read_error(size_t num_read, size_t count, FILE *stream) {
     if (num_read < count) {

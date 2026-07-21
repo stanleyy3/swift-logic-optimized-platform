@@ -4,14 +4,6 @@
  * Main training logic
  */
 
-////////////////////////////////////////////////////////////////////////////////
-// HARDCODED HYPERPARAMETERS
-////////////////////////////////////////////////////////////////////////////////
-
-#define TRAIN_UPDATE_ITERS 100
-
-////////////////////////////////////////////////////////////////////////////////
-
 #include "train.h"
 
 #include <stdio.h>
@@ -24,6 +16,7 @@
 #include "mat_ops.h"
 #include "data_ops.h"
 #include "model.h"
+#include "config.h"
 
 typedef enum accuracy_type {
     TRAIN,
@@ -359,12 +352,28 @@ static void print_model_header(Model *model,
     printf("\e[1;1H\e[2J");
 
     printf("--------------------------------------------------------------\n");
-    printf("| MLP Training                                               |\n");
-    printf("| accelerated by Swift Logic Optimized Platform (SLOP)       |\n");
+    printf("| "
+               ANSI_COLOR_RED "MLP Training"
+               ANSI_COLOR_RESET "                                               |\n");
+    printf("| "
+               ANSI_COLOR_YELLOW "accelerated by "
+               ANSI_COLOR_RED "S"
+               ANSI_COLOR_YELLOW "wift "
+               ANSI_COLOR_RED "L"
+               ANSI_COLOR_YELLOW "ogic "
+               ANSI_COLOR_RED "O"
+               ANSI_COLOR_YELLOW"ptimized "
+               ANSI_COLOR_RED "P"
+               ANSI_COLOR_YELLOW"latform"
+               ANSI_COLOR_RESET "              |\n");
     printf("--------------------------------------------------------------\n");
     printf("\n");
 
+#if DATASET == 0
+    printf("Dataset: MNIST\n");
+#elif DATASET == 1
     printf("Dataset: Fashion MNIST\n");
+#endif
     printf("Architecture: %d -> ", model->i_d);
     for (int L = 0; L < model->n_h_l; L++) printf("%d -> ", model->h_l_d[L]);
     printf("%d\n", model->o_d);
@@ -397,6 +406,7 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
     int epoch_iters = MLP.tr_s_s / batch_size;
     int num_iterations = epoch_iters * num_epochs;
 
+
     float *batch_X = malloc(MLP.i_d * batch_size * sizeof(float));
     int *batch_Y = malloc(batch_size * sizeof(int));
     float *one_hot_batch_Y = malloc(MLP.o_d * batch_size * sizeof(float));
@@ -409,6 +419,14 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
     int batch_start_idx = 0;
     float train_accuracy;
     float test_accuracy = 0.f;
+
+    // begin training run timing
+    struct timespec start;
+    timespec_get(&start, TIME_UTC);
+    struct timespec end;
+    struct timespec last_update_time;
+    timespec_get(&last_update_time, TIME_UTC);
+    double total_elapsed;
 
     // gradient descent (batched)
     // note: leaves out training samples at the end of an epoch that don't fit into a batch
@@ -453,8 +471,13 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
             test_accuracy = get_test_accuracy(&MLP);
         }
 
+        // calculate elapsed time since last update (milliseconds)
+        timespec_get(&end, TIME_UTC);
+        int update_elapsed = (end.tv_sec * 1e3 + end.tv_nsec / 1e6)
+                              - (last_update_time.tv_sec * 1e3 + last_update_time.tv_nsec / 1e6);
+
         // accuracy update
-        if (i % TRAIN_UPDATE_ITERS == 0) {
+        if (update_elapsed >= TRAIN_UPDATE_FREQ) {
             // calculate training accuracy
             // note: evaluates on predictions from previous iteration before latest parameter update
             train_accuracy = get_accuracy(&MLP, batch_Y, batch_size, TRAIN);
@@ -464,11 +487,20 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
 
             printf("Epoch: %d\n", i / epoch_iters);
             printf("Iteration: %d\n", i);
-            
             printf("Training accuracy: %.4f\n", train_accuracy);
             printf("Most recent test accuracy: %.4f\n", test_accuracy);
-
             printf("\n");
+
+            printf("--------------------------------------------------------------\n");
+            printf("\n");
+
+            // calculate total elapsed time since start of training run
+            total_elapsed = (float)(end.tv_sec - start.tv_sec) + (float)(end.tv_nsec - start.tv_nsec) / 1e9;
+
+            printf("Elapsed time: %.1f seconds\n", total_elapsed);
+            printf("Training run progress: %2.f%%\n", (float)i / num_iterations * 100);
+
+            timespec_get(&last_update_time, TIME_UTC);
         }
 
         batch_start_idx += batch_size;
@@ -479,6 +511,13 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
     print_model_header(&MLP,
                        num_epochs, batch_size, learning_rate);
     printf("Final test accuracy: %.4f\n", test_accuracy);
+    printf("\n");
+
+    // end training run timing
+    total_elapsed = (float)(end.tv_sec - start.tv_sec) + (float)(end.tv_nsec - start.tv_nsec) / 1e9;
+
+    // calculate and print elapsed execution time for training run
+    printf("Total elapsed time for training run: ~%.2f seconds\n", total_elapsed);
     printf("\n");
 
     // free memory

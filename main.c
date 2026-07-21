@@ -7,11 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include "train.h"
-
-#define RAND_SEED_RAND false
+#include "config.h"
 
 /**
  * @brief Gets hyperparameters from user through terminal
@@ -113,8 +111,20 @@ int main() {
         printf("\e[1;1H\e[2J");
 
         printf("--------------------------------------------------------------\n");
-        printf("| MLP Training                                               |\n");
-        printf("| accelerated by Swift Logic Optimized Platform (SLOP)       |\n");
+        printf("| "
+                   ANSI_COLOR_RED "MLP Training"
+                   ANSI_COLOR_RESET "                                               |\n");
+        printf("| "
+                   ANSI_COLOR_YELLOW "accelerated by "
+                   ANSI_COLOR_RED "S"
+                   ANSI_COLOR_YELLOW "wift "
+                   ANSI_COLOR_RED "L"
+                   ANSI_COLOR_YELLOW "ogic "
+                   ANSI_COLOR_RED "O"
+                   ANSI_COLOR_YELLOW"ptimized "
+                   ANSI_COLOR_RED "P"
+                   ANSI_COLOR_YELLOW"latform"
+                   ANSI_COLOR_RESET "              |\n");
         printf("--------------------------------------------------------------\n");
         printf("\n");
 
@@ -125,18 +135,10 @@ int main() {
 
         printf("Launching training run...\n");
 
-        time_t start = time(NULL);
-
         // launch a training run
         train_MNIST(num_hidden_layers, hidden_layer_dims,
                     num_epochs, batch_size, learning_rate,
                     RAND_SEED_RAND);
-
-        time_t end = time(NULL);
-
-        // calculate and print elapsed execution time for training run
-        printf("Elapsed time: ~%.0f seconds\n", difftime(end, start));
-        printf("\n");
 
         free(hidden_layer_dims);
 
