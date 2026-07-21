@@ -364,7 +364,7 @@ static void print_model_header(Model *model,
     printf("--------------------------------------------------------------\n");
     printf("\n");
 
-    printf("Dataset: MNIST\n");
+    printf("Dataset: Fashion MNIST\n");
     printf("Architecture: %d -> ", model->i_d);
     for (int L = 0; L < model->n_h_l; L++) printf("%d -> ", model->h_l_d[L]);
     printf("%d\n", model->o_d);

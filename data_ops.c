@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+// 0 - MNIST, 1 - Fashion MNIST
+#define DATASET 1
+
 static void check_read_error(size_t num_read, size_t count, FILE *stream) {
     if (num_read < count) {
         if (ferror(stream)) {
@@ -33,10 +36,19 @@ static uint32_t swap_endian32(uint32_t val) {
 void init_data_MNIST(Dataset *train_set, Dataset *test_set,
                      int *train_set_size, int *test_set_size) {
 
+#if DATASET == 0
+    // MNIST dataset
     char *train_input_path = "data/mnist/train-images.idx3-ubyte";
     char *train_labels_path = "data/mnist/train-labels.idx1-ubyte";
     char *test_input_path = "data/mnist/test-images.idx3-ubyte";
     char *test_labels_path = "data/mnist/test-labels.idx1-ubyte";
+#elif DATASET == 1
+    // Fashion MNIST dataset
+    char *train_input_path = "data/fashion_mnist/train-images.idx3-ubyte";
+    char *train_labels_path = "data/fashion_mnist/train-labels.idx1-ubyte";
+    char *test_input_path = "data/fashion_mnist/test-images.idx3-ubyte";
+    char *test_labels_path = "data/fashion_mnist/test-labels.idx1-ubyte";
+#endif
 
     unsigned char magic_bytes[4];
     int num_dims;

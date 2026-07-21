@@ -60,12 +60,12 @@ static void get_hyperparams(int *num_hidden_layers, int **hidden_layer_dims,
 
     // get number of epochs
     do {
-        printf("Number of epochs (1-40): ");
+        printf("Number of epochs (1-50): ");
 
         ret = scanf("%d", num_epochs);
         if (ret == EOF) exit(0);     // Ctrl-D pressed
         if (ret != 1) scanf("%*s");  // flush an invalid token
-    } while (ret != 1 || *num_epochs < 1 || *num_epochs > 40);
+    } while (ret != 1 || *num_epochs < 1 || *num_epochs > 50);
     printf("\n");
 
     // get batch size
@@ -80,13 +80,14 @@ static void get_hyperparams(int *num_hidden_layers, int **hidden_layer_dims,
 
     // get learning rate
     do {
-        printf("Learning rate (0.01, 0.02, 0.05, 0.10, 0.20): ");
+        printf("Learning rate (0.001, 0.01, 0.02, 0.05, 0.10, 0.20): ");
 
         ret = scanf("%f", learning_rate);
         if (ret == EOF) exit(0);     // Ctrl-D pressed
         if (ret != 1) scanf("%*s");  // flush an invalid token
     } while (ret != 1
-             || !(*learning_rate == 0.01f
+             || !(*learning_rate == 0.001f
+                  || *learning_rate == 0.01f
                   || *learning_rate == 0.02f
                   || *learning_rate == 0.05f
                   || *learning_rate == 0.1f
@@ -139,11 +140,12 @@ int main() {
 
         free(hidden_layer_dims);
 
+        printf("--------------------------------------------------------------\n");
+        printf("\n");
+
         // get whether to continue
         int ret;
         do {
-            printf("--------------------------------------------------------------\n");
-            printf("\n");
 
             printf("Would you like to launch another training run (1 (for yes), 0 (for no)): ");
 
