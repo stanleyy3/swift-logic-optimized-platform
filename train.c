@@ -353,10 +353,6 @@ static void print_model_header(Model *model,
 
     printf("--------------------------------------------------------------\n");
     printf("| "
-               ANSI_COLOR_RED "MLP Training"
-               ANSI_COLOR_RESET "                                               |\n");
-    printf("| "
-               ANSI_COLOR_YELLOW "accelerated by "
                ANSI_COLOR_RED "S"
                ANSI_COLOR_YELLOW "wift "
                ANSI_COLOR_RED "L"
@@ -365,7 +361,7 @@ static void print_model_header(Model *model,
                ANSI_COLOR_YELLOW"ptimized "
                ANSI_COLOR_RED "P"
                ANSI_COLOR_YELLOW"latform"
-               ANSI_COLOR_RESET "              |\n");
+               ANSI_COLOR_RESET "                             |\n");
     printf("--------------------------------------------------------------\n");
     printf("\n");
 
@@ -517,7 +513,7 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
     total_elapsed = (float)(end.tv_sec - start.tv_sec) + (float)(end.tv_nsec - start.tv_nsec) / 1e9;
 
     // calculate and print elapsed execution time for training run
-    printf("Total elapsed time for training run: ~%.2f seconds\n", total_elapsed);
+    printf("Total elapsed time for training run: %.2f seconds\n", total_elapsed);
     printf("\n");
 
     // free memory

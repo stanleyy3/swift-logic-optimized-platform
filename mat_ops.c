@@ -79,8 +79,7 @@ void tiled_mat_mat_mul(float *restrict A, float *restrict B,
     int num_tiles_j = (B_n + TILE_DIM - 1) / TILE_DIM;
     int num_tiles_k = (A_n + TILE_DIM - 1) / TILE_DIM;
 
-    // loop across C's tiles
-
+    // loop across C's tiles (executed in parallel)
     #pragma omp parallel for collapse(2) schedule(static)
     for (int i = 0; i < num_tiles_i; i++) {
         for (int j = 0; j < num_tiles_j; j++) {

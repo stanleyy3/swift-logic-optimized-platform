@@ -112,10 +112,6 @@ int main() {
 
         printf("--------------------------------------------------------------\n");
         printf("| "
-                   ANSI_COLOR_RED "MLP Training"
-                   ANSI_COLOR_RESET "                                               |\n");
-        printf("| "
-                   ANSI_COLOR_YELLOW "accelerated by "
                    ANSI_COLOR_RED "S"
                    ANSI_COLOR_YELLOW "wift "
                    ANSI_COLOR_RED "L"
@@ -124,7 +120,7 @@ int main() {
                    ANSI_COLOR_YELLOW"ptimized "
                    ANSI_COLOR_RED "P"
                    ANSI_COLOR_YELLOW"latform"
-                   ANSI_COLOR_RESET "              |\n");
+                   ANSI_COLOR_RESET "                             |\n");
         printf("--------------------------------------------------------------\n");
         printf("\n");
 
