@@ -9,13 +9,13 @@
 #define RAND_SEED_RAND false
 
 // dataset to train on (0 - MNIST, 1 - Fashion MNIST)
-#define DATASET 1
+#define DATASET 0
 
 // number of milliseconds per update of training status
 #define TRAIN_UPDATE_FREQ 100
 
 // matrix multiplication tile dimension
-#define TILE_DIM 32
+#define TILE_DIM 64
 
 // terminal output color escape sequences
 #define ANSI_COLOR_YELLOW "\x1b[33m"

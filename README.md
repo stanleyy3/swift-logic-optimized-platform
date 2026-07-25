@@ -5,23 +5,44 @@
 ```
 ./
 ├── data/
-│   └── mnist/
-│       ├── test-images.idx3-ubyte
-│       ├── test-labels.idx1-ubyte
-│       ├── train-images.idx3-ubyte
-│       └── train-labels.idx1-ubyte
+│   ├── mnist/
+│   │   ├── test-images.idx3-ubyte
+│   │   ├── test-labels.idx1-ubyte
+│   │   ├── train-images.idx3-ubyte
+│   │   └── train-labels.idx1-ubyte
+│   └── fashion_mnist/
+│       ├── test-images.idx3-ubyte
+│       ├── test-labels.idx1-ubyte
+│       ├── train-images.idx3-ubyte
+│       └── train-labels.idx1-ubyte
+├── baseline/
+│   ├── Makefile
+│   ├── config.h
+│   ├── data_ops.c
+│   ├── data_ops.h
+│   ├── main.c
+│   ├── mat_ops.c
+│   ├── mat_ops.h
+│   ├── model.c
+│   ├── model.h
+│   ├── train.c
+│   └── train.h
+├── accelerated/
+│   ├── host/
+│   │   ├── Makefile
+│   │   ├── config.h
+│   │   ├── data_ops.c
+│   │   ├── data_ops.h
+│   │   ├── main.c
+│   │   ├── mat_ops.c
+│   │   ├── mat_ops.h
+│   │   ├── model.c
+│   │   ├── model.h
+│   │   ├── train.c
+│   │   └── train.h
+│   └── device/          # device HDL files
 ├── .gitignore
-├── data_ops.c
-├── data_ops.h
-├── main.c
-├── Makefile
-├── mat_ops.c
-├── mat_ops.h
-├── model.c
-├── model.h
-├── README.md
-├── train.c
-└── train.h
+└── README.md
 ```
 
 ## Dependencies
@@ -30,17 +51,21 @@ Just the C standard library!
 
 ## Usage
 
+Inside subdirectory of version you want to run (`baseline/` or `accelerated/host/`):
+
 - To run normally: `make`
-To run with profiling: `make PROFILE=1`
+- To run with `gprof`: `make PROFILE=1`
+  - Note: the executable is called `traina` for the accelerated version and `trainb` for the baseline version
 
 - To clean build files: `make clean`
 
 ## Performance notes
 
-- There are a number of unoptimized parts of the program, to say the least. We intentionally leave these to focus more on the hardware side of the project.
-  - E.g., there are multiple instances of column-major access patterns (for flattened 2d matrices) that could be row-major accesses instead.
+There are various software optimizations left unaddressed to spend more time on the hardware side of the project.
 
-## Correctness verification*
+## Approximate correctness verification*
+
+### MNIST
 
 ```
 Intel(R) Xeon(R) Gold 6248R CPU @ 3.00GHz (Andrew machines):

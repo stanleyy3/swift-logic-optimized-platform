@@ -124,6 +124,13 @@ int main() {
         printf("--------------------------------------------------------------\n");
         printf("\n");
 
+#if DATASET == 0
+        printf("Dataset: MNIST\n");
+#elif DATASET == 1
+        printf("Dataset: Fashion MNIST\n");
+#endif
+        printf("\n");
+
         // get hyperparameters
         get_hyperparams(&num_hidden_layers, &hidden_layer_dims,
                         &num_epochs, &batch_size,

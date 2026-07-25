@@ -1,7 +1,7 @@
 CC = gcc
-CFLAGS = -fopenmp -O3 -Wall -Wextra -MMD -MP
+CFLAGS = -fopenmp -O3 -Wall -Wextra -MMD -MP -march=native
 LDLIBS = -lm
-TARGET = train
+TARGET = traina
 
 # optionally add profiling flags
 ifeq ($(PROFILE), 1)
