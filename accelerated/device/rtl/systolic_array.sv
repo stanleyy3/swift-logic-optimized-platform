@@ -11,7 +11,7 @@ module systolic_array (
     output logic [ACC_WIDTH-1:0] acc_values   [0:ARRAY_DIM-1][0:ARRAY_DIM-1]
 );
 
-    localparam ARRAY_DIM = 4;
+    localparam ARRAY_DIM = 8;
     localparam MUL_WIDTH = 16;
     localparam ACC_WIDTH = 48;
 
