@@ -13,7 +13,7 @@ module systolic_array (
 
     localparam ARRAY_DIM = 4;
     localparam MUL_WIDTH = 16;
-    localparam ACC_WIDTH = 4;
+    localparam ACC_WIDTH = 48;
 
     ////////////////////////////////////////////////////////////////////////////////
 
