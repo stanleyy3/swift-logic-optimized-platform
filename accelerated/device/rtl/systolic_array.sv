@@ -1,10 +1,6 @@
 // systolic_array.sv -- Systolic array (top module)
 
-module systolic_array #(
-    parameter ARRAY_DIM = 4,
-    parameter MUL_WIDTH = 16,
-    parameter ACC_WIDTH = 48
-) (
+module systolic_array (
     input  logic                 clk,
     input  logic                 rst,
     input  logic                 load,
@@ -14,6 +10,12 @@ module systolic_array #(
     output logic                 done,
     output logic [ACC_WIDTH-1:0] acc_values   [0:ARRAY_DIM-1][0:ARRAY_DIM-1]
 );
+
+    localparam ARRAY_DIM = 4;
+    localparam MUL_WIDTH = 16;
+    localparam ACC_WIDTH = 4;
+
+    ////////////////////////////////////////////////////////////////////////////////
 
     // operand buffers
     logic                         read_operands;
