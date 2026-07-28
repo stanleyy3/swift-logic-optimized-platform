@@ -1,7 +1,7 @@
 // systolic_array.sv -- Systolic array (top module)
 
 module systolic_array #(
-    parameter ARRAY_DIM = 4,
+    parameter ARRAY_DIM = 8,
     parameter MUL_WIDTH = 16,
     parameter ACC_WIDTH = 48
 ) (
