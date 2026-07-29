@@ -4,6 +4,7 @@
 
 #include "mat_ops.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -15,6 +16,7 @@
 
 #include "config.h"
 #include "fpga.h"
+#include "quant.h"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -107,13 +109,36 @@ void tiled_mat_mat_mul(float *restrict A, float *restrict B,
 
 void tiled_mat_mat_mul_fpga(float *A, float *B, int M, int K, int N, float *C) {
     // M = A_m, K = A_n, N = B_n
+
+    // Quantize both operands up front rather than per tile. The scales are
+    // per-row of A and per-column of B, so they do not vary along k: every
+    // tile of a given row/column shares a scale, each tile of A is reused
+    // across C's tile columns, and the integer accumulators of separate k
+    // tiles can be summed directly below.
+    int16_t *A_q = malloc((size_t)M * K * sizeof(int16_t));
+    int16_t *B_q = malloc((size_t)K * N * sizeof(int16_t));
+    float *A_scales = malloc(M * sizeof(float));
+    float *B_scales = malloc(N * sizeof(float));
+
+    quantize_rows(A, M, K, A_q, A_scales);
+    quantize_cols(B, K, N, B_q, B_scales);
+
     int num_tiles_i = (M + TILE_DIM - 1) / TILE_DIM;
     int num_tiles_j = (N + TILE_DIM - 1) / TILE_DIM;
     int num_tiles_k = (K + TILE_DIM - 1) / TILE_DIM;
 
-    float *a_map = xrtBOMap(fpga_bo_a);
-    float *b_map = xrtBOMap(fpga_bo_b);
-    float *c_map = xrtBOMap(fpga_bo_c);
+    int16_t *a_map = xrtBOMap(fpga_bo_a);
+    int16_t *b_map = xrtBOMap(fpga_bo_b);
+    uint64_t *c_map = xrtBOMap(fpga_bo_c);
+
+    if (!a_map || !b_map || !c_map) {
+        fprintf(stderr, "tiled_mat_mat_mul_fpga: failed to map a tile buffer "
+                        "(was fpga_init() called?)\n");
+        exit(1);
+    }
+
+    // running integer total for one tile of C, summed across k
+    int64_t *acc_tile = malloc((size_t)TILE_DIM * TILE_DIM * sizeof(int64_t));
 
     // loop across C's tiles
     for (int i = 0; i < num_tiles_i; i++) {
@@ -121,52 +146,77 @@ void tiled_mat_mat_mul_fpga(float *A, float *B, int M, int K, int N, float *C) {
             int tile_A_m = MIN(TILE_DIM, M - i * TILE_DIM);
             int tile_B_n = MIN(TILE_DIM, N - j * TILE_DIM);
 
-            // loop across C's tiled matmuls; the PE array accumulates each
-            // tile's contribution in DRAM (bo_c) across k, so only bo_a/bo_b
-            // (never the whole A/B) need to be resident on the device at once
+            memset(acc_tile, 0, (size_t)TILE_DIM * TILE_DIM * sizeof(int64_t));
+
+            // loop across C's tiled matmuls; only one tile of each operand is
+            // ever resident on the device, never the whole of A or B
             for (int k = 0; k < num_tiles_k; k++) {
                 int tile_A_n = MIN(TILE_DIM, K - k * TILE_DIM);
 
                 // copy A(i,k) and B(k,j) tiles into the reused tile buffers
                 for (int r = 0; r < tile_A_m; r++) {
                     memcpy(a_map + r * TILE_DIM,
-                           A + (i * TILE_DIM + r) * K + k * TILE_DIM,
-                           tile_A_n * sizeof(float));
+                           A_q + (i * TILE_DIM + r) * K + k * TILE_DIM,
+                           tile_A_n * sizeof(int16_t));
                 }
                 for (int r = 0; r < tile_A_n; r++) {
                     memcpy(b_map + r * TILE_DIM,
-                           B + (k * TILE_DIM + r) * N + j * TILE_DIM,
-                           tile_B_n * sizeof(float));
+                           B_q + (k * TILE_DIM + r) * N + j * TILE_DIM,
+                           tile_B_n * sizeof(int16_t));
                 }
 
-                xrtBOSync(fpga_bo_a, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)tile_A_m * TILE_DIM * sizeof(float), 0);
-                xrtBOSync(fpga_bo_b, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)tile_A_n * TILE_DIM * sizeof(float), 0);
+                // The array consumes a fixed-depth tile: ARRAY_DIM is a
+                // compile-time parameter of systolic_array.sv, not a runtime
+                // input, so it multiplies and accumulates the whole tile
+                // regardless of tile_A_n. On a short k tile the remainder of
+                // the buffers still holds the previous launch's operands,
+                // which would otherwise be summed into the result, so zero
+                // the padding. Both memsets are no-ops unless k is ragged.
+                for (int r = 0; r < tile_A_m; r++) {
+                    memset(a_map + r * TILE_DIM + tile_A_n, 0,
+                           (size_t)(TILE_DIM - tile_A_n) * sizeof(int16_t));
+                }
+                memset(b_map + (size_t)tile_A_n * TILE_DIM, 0,
+                       (size_t)(TILE_DIM - tile_A_n) * TILE_DIM * sizeof(int16_t));
 
-                xrtRunHandle run = xrtRunOpen(fpga_matmul_krnl);
-                xrtRunSetArg(run, 0, fpga_bo_a);
-                xrtRunSetArg(run, 1, fpga_bo_b);
-                xrtRunSetArg(run, 2, fpga_bo_c);
-                xrtRunSetArg(run, 3, tile_A_m);
-                xrtRunSetArg(run, 4, tile_A_n);
-                xrtRunSetArg(run, 5, tile_B_n);
-                xrtRunSetArg(run, 6, (int)(k != 0)); // accumulate: 0 resets the PE array's accumulators (first k-tile), 1 keeps accumulating
-                xrtRunStart(run);
-                xrtRunWait(run);
-                xrtRunClose(run);
+                // B is synced in full, since its zeroed padding rows extend
+                // past tile_A_n and those zeros have to reach the device
+                xrtBOSync(fpga_bo_a, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)tile_A_m * TILE_DIM * sizeof(int16_t), 0);
+                xrtBOSync(fpga_bo_b, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)TILE_DIM * TILE_DIM * sizeof(int16_t), 0);
 
-                // the PE array has now accumulated over all of k only once k reaches the last tile
-                if (k == num_tiles_k - 1) {
-                    xrtBOSync(fpga_bo_c, XCL_BO_SYNC_BO_FROM_DEVICE, (size_t)tile_A_m * TILE_DIM * sizeof(float), 0);
+                xrtRunSetArg(fpga_matmul_run, 0, fpga_bo_a);
+                xrtRunSetArg(fpga_matmul_run, 1, fpga_bo_b);
+                xrtRunSetArg(fpga_matmul_run, 2, fpga_bo_c);
+                xrtRunSetArg(fpga_matmul_run, 3, tile_A_m);
+                xrtRunSetArg(fpga_matmul_run, 4, tile_A_n);
+                xrtRunSetArg(fpga_matmul_run, 5, tile_B_n);
+                xrtRunStart(fpga_matmul_run);
+                xrtRunWait(fpga_matmul_run);
 
-                    for (int r = 0; r < tile_A_m; r++) {
-                        memcpy(C + (i * TILE_DIM + r) * N + j * TILE_DIM,
-                               c_map + r * TILE_DIM,
-                               tile_B_n * sizeof(float));
+                xrtBOSync(fpga_bo_c, XCL_BO_SYNC_BO_FROM_DEVICE, (size_t)tile_A_m * TILE_DIM * sizeof(uint64_t), 0);
+
+                // The array zeroes its accumulators on every launch, so each
+                // launch yields only this k tile's partial products. Summing
+                // them here is exact, since all k tiles share a scale.
+                for (int r = 0; r < tile_A_m; r++) {
+                    for (int c = 0; c < tile_B_n; c++) {
+                        acc_tile[r * TILE_DIM + c] += sign_extend_48(c_map[r * TILE_DIM + c]);
                     }
                 }
             }
+
+            dequantize_block(acc_tile, TILE_DIM,
+                             tile_A_m, tile_B_n,
+                             A_scales + i * TILE_DIM, B_scales + j * TILE_DIM,
+                             C + (i * TILE_DIM) * N + j * TILE_DIM, N);
         }
     }
+
+    free(acc_tile);
+    free(A_scales);
+    free(B_scales);
+    free(A_q);
+    free(B_q);
 }
 
 void scal_mat_mul(float a, float *B,

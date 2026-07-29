@@ -12,6 +12,10 @@
 extern xrtDeviceHandle fpga_dev;
 extern xrtKernelHandle fpga_matmul_krnl;
 
+// a run object is reusable, so one is opened up front and re-armed for each
+// tile rather than opened and closed per launch
+extern xrtRunHandle fpga_matmul_run;
+
 // persistent TILE_DIM x TILE_DIM tile buffers, reused across every matmul call
 extern xrtBufferHandle fpga_bo_a;
 extern xrtBufferHandle fpga_bo_b;
