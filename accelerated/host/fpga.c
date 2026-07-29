@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "quant.h"
 
 xrtDeviceHandle fpga_dev = NULL;
 xrtKernelHandle fpga_matmul_krnl = NULL;
@@ -74,9 +75,9 @@ void fpga_init(void) {
         exit(1);
     }
 
-    // operands are int16 (the array's MUL_WIDTH); each accumulator is int48,
-    // read back out of a 64-bit slot
-    size_t operand_bytes = (size_t)TILE_DIM * TILE_DIM * sizeof(int16_t);
+    // operands are float16 (the array's MUL_WIDTH); each accumulator is
+    // ACC_WIDTH bits of fixed point, read back out of a 64-bit slot
+    size_t operand_bytes = (size_t)TILE_DIM * TILE_DIM * sizeof(f16_t);
     size_t acc_bytes = (size_t)TILE_DIM * TILE_DIM * sizeof(uint64_t);
 
     fpga_bo_a = alloc_tile_bo(operand_bytes, 0);

@@ -110,25 +110,25 @@ void tiled_mat_mat_mul(float *restrict A, float *restrict B,
 void tiled_mat_mat_mul_fpga(float *A, float *B, int M, int K, int N, float *C) {
     // M = A_m, K = A_n, N = B_n
 
-    // Quantize both operands up front rather than per tile. The scales are
-    // per-row of A and per-column of B, so they do not vary along k: every
-    // tile of a given row/column shares a scale, each tile of A is reused
-    // across C's tile columns, and the integer accumulators of separate k
-    // tiles can be summed directly below.
-    int16_t *A_q = malloc((size_t)M * K * sizeof(int16_t));
-    int16_t *B_q = malloc((size_t)K * N * sizeof(int16_t));
+    // Convert both operands to float16 up front rather than per tile. The
+    // scales are per-row of A and per-column of B, so they do not vary along
+    // k: every tile of a given row/column shares a scale, each tile of A is
+    // reused across C's tile columns, and the fixed-point accumulators of
+    // separate k tiles can be summed directly below.
+    f16_t *A_h = malloc((size_t)M * K * sizeof(f16_t));
+    f16_t *B_h = malloc((size_t)K * N * sizeof(f16_t));
     float *A_scales = malloc(M * sizeof(float));
     float *B_scales = malloc(N * sizeof(float));
 
-    quantize_rows(A, M, K, A_q, A_scales);
-    quantize_cols(B, K, N, B_q, B_scales);
+    quantize_rows(A, M, K, A_h, A_scales);
+    quantize_cols(B, K, N, B_h, B_scales);
 
     int num_tiles_i = (M + TILE_DIM - 1) / TILE_DIM;
     int num_tiles_j = (N + TILE_DIM - 1) / TILE_DIM;
     int num_tiles_k = (K + TILE_DIM - 1) / TILE_DIM;
 
-    int16_t *a_map = xrtBOMap(fpga_bo_a);
-    int16_t *b_map = xrtBOMap(fpga_bo_b);
+    f16_t *a_map = xrtBOMap(fpga_bo_a);
+    f16_t *b_map = xrtBOMap(fpga_bo_b);
     uint64_t *c_map = xrtBOMap(fpga_bo_c);
 
     if (!a_map || !b_map || !c_map) {
@@ -137,7 +137,8 @@ void tiled_mat_mat_mul_fpga(float *A, float *B, int M, int K, int N, float *C) {
         exit(1);
     }
 
-    // running integer total for one tile of C, summed across k
+    // running fixed-point total for one tile of C, summed across k in units of
+    // 2**ACC_LSB
     int64_t *acc_tile = malloc((size_t)TILE_DIM * TILE_DIM * sizeof(int64_t));
 
     // loop across C's tiles
@@ -156,13 +157,13 @@ void tiled_mat_mat_mul_fpga(float *A, float *B, int M, int K, int N, float *C) {
                 // copy A(i,k) and B(k,j) tiles into the reused tile buffers
                 for (int r = 0; r < tile_A_m; r++) {
                     memcpy(a_map + r * TILE_DIM,
-                           A_q + (i * TILE_DIM + r) * K + k * TILE_DIM,
-                           tile_A_n * sizeof(int16_t));
+                           A_h + (i * TILE_DIM + r) * K + k * TILE_DIM,
+                           tile_A_n * sizeof(f16_t));
                 }
                 for (int r = 0; r < tile_A_n; r++) {
                     memcpy(b_map + r * TILE_DIM,
-                           B_q + (k * TILE_DIM + r) * N + j * TILE_DIM,
-                           tile_B_n * sizeof(int16_t));
+                           B_h + (k * TILE_DIM + r) * N + j * TILE_DIM,
+                           tile_B_n * sizeof(f16_t));
                 }
 
                 // The array consumes a fixed-depth tile: ARRAY_DIM is a
@@ -171,18 +172,20 @@ void tiled_mat_mat_mul_fpga(float *A, float *B, int M, int K, int N, float *C) {
                 // regardless of tile_A_n. On a short k tile the remainder of
                 // the buffers still holds the previous launch's operands,
                 // which would otherwise be summed into the result, so zero
-                // the padding. Both memsets are no-ops unless k is ragged.
+                // the padding. An all-zero halfword is float16 +0.0, so a
+                // memset still pads with a value the MAC treats as zero. Both
+                // memsets are no-ops unless k is ragged.
                 for (int r = 0; r < tile_A_m; r++) {
                     memset(a_map + r * TILE_DIM + tile_A_n, 0,
-                           (size_t)(TILE_DIM - tile_A_n) * sizeof(int16_t));
+                           (size_t)(TILE_DIM - tile_A_n) * sizeof(f16_t));
                 }
                 memset(b_map + (size_t)tile_A_n * TILE_DIM, 0,
-                       (size_t)(TILE_DIM - tile_A_n) * TILE_DIM * sizeof(int16_t));
+                       (size_t)(TILE_DIM - tile_A_n) * TILE_DIM * sizeof(f16_t));
 
                 // B is synced in full, since its zeroed padding rows extend
                 // past tile_A_n and those zeros have to reach the device
-                xrtBOSync(fpga_bo_a, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)tile_A_m * TILE_DIM * sizeof(int16_t), 0);
-                xrtBOSync(fpga_bo_b, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)TILE_DIM * TILE_DIM * sizeof(int16_t), 0);
+                xrtBOSync(fpga_bo_a, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)tile_A_m * TILE_DIM * sizeof(f16_t), 0);
+                xrtBOSync(fpga_bo_b, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)TILE_DIM * TILE_DIM * sizeof(f16_t), 0);
 
                 xrtRunSetArg(fpga_matmul_run, 0, fpga_bo_a);
                 xrtRunSetArg(fpga_matmul_run, 1, fpga_bo_b);
@@ -197,10 +200,12 @@ void tiled_mat_mat_mul_fpga(float *A, float *B, int M, int K, int N, float *C) {
 
                 // The array zeroes its accumulators on every launch, so each
                 // launch yields only this k tile's partial products. Summing
-                // them here is exact, since all k tiles share a scale.
+                // them here is exact: all k tiles share a scale, and every
+                // accumulator uses the same fixed-point LSB weight, so these
+                // are plain integer additions.
                 for (int r = 0; r < tile_A_m; r++) {
                     for (int c = 0; c < tile_B_n; c++) {
-                        acc_tile[r * TILE_DIM + c] += sign_extend_48(c_map[r * TILE_DIM + c]);
+                        acc_tile[r * TILE_DIM + c] += sign_extend_acc(c_map[r * TILE_DIM + c]);
                     }
                 }
             }
@@ -215,8 +220,8 @@ void tiled_mat_mat_mul_fpga(float *A, float *B, int M, int K, int N, float *C) {
     free(acc_tile);
     free(A_scales);
     free(B_scales);
-    free(A_q);
-    free(B_q);
+    free(A_h);
+    free(B_h);
 }
 
 void scal_mat_mul(float a, float *B,
