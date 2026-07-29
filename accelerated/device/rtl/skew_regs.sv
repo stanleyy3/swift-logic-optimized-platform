@@ -4,7 +4,7 @@
 
 module skew_regs #(
     parameter ARRAY_DIM = 4,
-    parameter MUL_WIDTH = 16
+    parameter MUL_WIDTH = 32
 ) (
     input  logic clk,
     input  logic zero_data,

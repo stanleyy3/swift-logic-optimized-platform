@@ -1,9 +1,13 @@
 // systolic_array.sv -- Systolic array (top module)
+//
+// - Floating-point MACs
 
 module systolic_array #(
     parameter ARRAY_DIM = 8,
-    parameter MUL_WIDTH = 16,
-    parameter ACC_WIDTH = 48
+    parameter MUL_WIDTH = 16, // 32
+    parameter EXP_WIDTH = 5,  // 8
+    parameter ACC_WIDTH = 48, // 64
+    parameter ACC_LSB = -24   // -52
 ) (
     input  logic                 clk,
     input  logic                 rst,
@@ -72,10 +76,14 @@ module systolic_array #(
     // PE ARRAY
     ////////////////////////////////////////////////////////////////////////////////
 
-    pe_array #(.ARRAY_DIM(ARRAY_DIM), .MUL_WIDTH(MUL_WIDTH), .ACC_WIDTH(ACC_WIDTH)) pe_array_0(.clk,
-                                                                                               .zero_data,
-                                                                                               .a_in_values(pe_array_A_in_values),
-                                                                                               .b_in_values(pe_array_B_in_values),
-                                                                                               .acc_values);
+    pe_array #(.ARRAY_DIM(ARRAY_DIM),
+               .MUL_WIDTH(MUL_WIDTH),
+               .EXP_WIDTH(EXP_WIDTH),
+               .ACC_WIDTH(ACC_WIDTH),
+               .ACC_LSB(ACC_LSB)) pe_array_0(.clk,
+                                             .zero_data,
+                                             .a_in_values(pe_array_A_in_values),
+                                             .b_in_values(pe_array_B_in_values),
+                                             .acc_values);
 
 endmodule

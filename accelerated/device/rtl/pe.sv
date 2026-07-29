@@ -7,6 +7,8 @@
 //   makes `a` and `b` availables to downstream PEs
 // - Operands are IEEE-754 binary32, the accumulated value is fixed-point with
 //   an LSB of weight 2**ACC_LSB (see mac.sv)
+//
+// *Datatype described here may have changed
 
 module pe #(
     parameter MUL_WIDTH = 32,

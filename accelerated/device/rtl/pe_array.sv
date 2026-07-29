@@ -7,8 +7,10 @@
 
 module pe_array #(
     parameter ARRAY_DIM = 4,
-    parameter MUL_WIDTH = 16,
-    parameter ACC_WIDTH = 48
+    parameter MUL_WIDTH = 32,
+    parameter EXP_WIDTH = 8,
+    parameter ACC_WIDTH = 64,
+    parameter ACC_LSB = -52
 ) (
     input  logic                 clk,
     input  logic                 zero_data,
@@ -30,13 +32,16 @@ module pe_array #(
         for (genvar i = 0; i < ARRAY_DIM; i++) begin
             for (genvar j = 0; j < ARRAY_DIM; j++) begin
                 // output stream values of last row and column are left unconnected
-                pe #(.MUL_WIDTH(MUL_WIDTH), .ACC_WIDTH(ACC_WIDTH)) pe_instance(.clk,
-                                                                               .zero_data(zero_data),
-                                                                               .a_in((j == 0) ? a_in_values[i] : a_stream[i][j-1]),
-                                                                               .b_in((i == 0) ? b_in_values[j] : b_stream[i-1][j]),
-                                                                               .a_out(a_stream[i][j]),
-                                                                               .b_out(b_stream[i][j]),
-                                                                               .acc(acc_values[i][j]));
+                pe #(.MUL_WIDTH(MUL_WIDTH),
+                     .EXP_WIDTH(EXP_WIDTH),
+                     .ACC_WIDTH(ACC_WIDTH),
+                     .ACC_LSB(ACC_LSB)) pe_instance(.clk,
+                                                    .zero_data(zero_data),
+                                                    .a_in((j == 0) ? a_in_values[i] : a_stream[i][j-1]),
+                                                    .b_in((i == 0) ? b_in_values[j] : b_stream[i-1][j]),
+                                                    .a_out(a_stream[i][j]),
+                                                    .b_out(b_stream[i][j]),
+                                                    .acc(acc_values[i][j]));
             end
         end
     endgenerate

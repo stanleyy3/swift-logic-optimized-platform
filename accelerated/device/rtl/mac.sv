@@ -7,6 +7,8 @@
 //   the alignment shift discards bits, and only below 2**ACC_LSB
 // - Subnormal operands are flushed to zero, matching the Vivado FP Operator
 // - Infinities and NaNs are not handled
+//
+// *Datatype described here may have changed
 
 module mac #(
     parameter MUL_WIDTH = 32,
@@ -28,14 +30,14 @@ module mac #(
     // the mantissa product's LSB has a weight of 2**(exp_a + exp_b - SHIFT_BIAS - ACC_LSB)
     localparam signed [15:0] SHIFT_BIAS = 2 * BIAS + 2 * FRAC_WIDTH + ACC_LSB;
 
-    logic                    sign_a, sign_b;
-    logic [EXP_WIDTH-1:0]    exp_a, exp_b;
-    logic [FRAC_WIDTH-1:0]   frac_a, frac_b;
-    logic [MANT_WIDTH-1:0]   mant_a, mant_b;
-    logic [PROD_WIDTH-1:0]   mant_prod;
-    logic                    prod_sign, is_zero;
-    logic signed [15:0]      shift_amt;
-    logic [ACC_WIDTH-1:0]    aligned;
+    logic                        sign_a, sign_b;
+    logic [EXP_WIDTH-1:0]        exp_a, exp_b;
+    logic [FRAC_WIDTH-1:0]       frac_a, frac_b;
+    logic [MANT_WIDTH-1:0]       mant_a, mant_b;
+    logic [PROD_WIDTH-1:0]       mant_prod;
+    logic                        prod_sign, is_zero;
+    logic signed [15:0]          shift_amt;
+    logic [ACC_WIDTH-1:0]        aligned;
     logic signed [ACC_WIDTH-1:0] addend;
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -66,9 +68,9 @@ module mac #(
     // product lying entirely outside the accumulator's window contributes nothing
     assign shift_amt = signed'(16'(exp_a) + 16'(exp_b)) - SHIFT_BIAS;
 
-    assign aligned = (is_zero || (shift_amt <= -PROD_WIDTH) || (shift_amt >= ACC_WIDTH)) ? '0                                                :
-                     (shift_amt < 0)                                                     ? (ACC_WIDTH'(mant_prod) >> unsigned'(-shift_amt)) :
-                                                                                           (ACC_WIDTH'(mant_prod) << unsigned'(shift_amt));
+    assign aligned = (is_zero || (shift_amt <= -PROD_WIDTH) || (shift_amt >= ACC_WIDTH)) ? '0
+                                                                                         : ((shift_amt < 0) ? (ACC_WIDTH'(mant_prod) >> unsigned'(-shift_amt))
+                                                                                                            : (ACC_WIDTH'(mant_prod) << unsigned'(shift_amt)));
 
     ////////////////////////////////////////////////////////////////////////////////
     // ACCUMULATE
