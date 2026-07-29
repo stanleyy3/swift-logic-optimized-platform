@@ -44,6 +44,27 @@ void tiled_mat_mat_mul(float *restrict A, float *restrict B,
                        float *restrict C);
 
 /**
+ * @brief Computes `C` := `A` @ `B` (tiled, offloaded to the FPGA systolic array)
+ *
+ * - `B` is inferred to have `A_n` rows
+ *
+ * - `C` cannot be one of `A` or `B`
+ *
+ * - requires `fpga_init()` to have been called first
+ *
+ * @param[in]  A First input matrix
+ * @param[in]  B Second input matrix
+ * @param[in]  M Number of rows in `A`
+ * @param[in]  K Number of columns in `A` (`B` is inferred to have
+ *               the same number of rows)
+ * @param[in]  N Number of columns in `B`
+ * @param[out] C Output matrix
+ */
+void tiled_mat_mat_mul_fpga(float *A, float *B,
+                            int M, int K, int N,
+                            float *C);
+
+/**
  * @brief Computes `C` := `a` * `B`
  * 
  * - `a` is a scalar and `B` is a matrix

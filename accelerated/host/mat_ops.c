@@ -6,9 +6,15 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <math.h>
 
+#include <xrt.h>
+#include <xrt/xrt_kernel.h>
+#include <xrt/xrt_bo.h>
+
 #include "config.h"
+#include "fpga.h"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -94,6 +100,70 @@ void tiled_mat_mat_mul(float *restrict A, float *restrict B,
                                  tile_A_m, tile_A_n, tile_B_n,
                                  A_n, B_n,
                                  C + (i * TILE_DIM * B_n + j * TILE_DIM));
+            }
+        }
+    }
+}
+
+void tiled_mat_mat_mul_fpga(float *A, float *B, int M, int K, int N, float *C) {
+    // M = A_m, K = A_n, N = B_n
+    int num_tiles_i = (M + TILE_DIM - 1) / TILE_DIM;
+    int num_tiles_j = (N + TILE_DIM - 1) / TILE_DIM;
+    int num_tiles_k = (K + TILE_DIM - 1) / TILE_DIM;
+
+    float *a_map = xrtBOMap(fpga_bo_a);
+    float *b_map = xrtBOMap(fpga_bo_b);
+    float *c_map = xrtBOMap(fpga_bo_c);
+
+    // loop across C's tiles
+    for (int i = 0; i < num_tiles_i; i++) {
+        for (int j = 0; j < num_tiles_j; j++) {
+            int tile_A_m = MIN(TILE_DIM, M - i * TILE_DIM);
+            int tile_B_n = MIN(TILE_DIM, N - j * TILE_DIM);
+
+            // loop across C's tiled matmuls; the PE array accumulates each
+            // tile's contribution in DRAM (bo_c) across k, so only bo_a/bo_b
+            // (never the whole A/B) need to be resident on the device at once
+            for (int k = 0; k < num_tiles_k; k++) {
+                int tile_A_n = MIN(TILE_DIM, K - k * TILE_DIM);
+
+                // copy A(i,k) and B(k,j) tiles into the reused tile buffers
+                for (int r = 0; r < tile_A_m; r++) {
+                    memcpy(a_map + r * TILE_DIM,
+                           A + (i * TILE_DIM + r) * K + k * TILE_DIM,
+                           tile_A_n * sizeof(float));
+                }
+                for (int r = 0; r < tile_A_n; r++) {
+                    memcpy(b_map + r * TILE_DIM,
+                           B + (k * TILE_DIM + r) * N + j * TILE_DIM,
+                           tile_B_n * sizeof(float));
+                }
+
+                xrtBOSync(fpga_bo_a, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)tile_A_m * TILE_DIM * sizeof(float), 0);
+                xrtBOSync(fpga_bo_b, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)tile_A_n * TILE_DIM * sizeof(float), 0);
+
+                xrtRunHandle run = xrtRunOpen(fpga_matmul_krnl);
+                xrtRunSetArg(run, 0, fpga_bo_a);
+                xrtRunSetArg(run, 1, fpga_bo_b);
+                xrtRunSetArg(run, 2, fpga_bo_c);
+                xrtRunSetArg(run, 3, tile_A_m);
+                xrtRunSetArg(run, 4, tile_A_n);
+                xrtRunSetArg(run, 5, tile_B_n);
+                xrtRunSetArg(run, 6, (int)(k != 0)); // accumulate: 0 resets the PE array's accumulators (first k-tile), 1 keeps accumulating
+                xrtRunStart(run);
+                xrtRunWait(run);
+                xrtRunClose(run);
+
+                // the PE array has now accumulated over all of k only once k reaches the last tile
+                if (k == num_tiles_k - 1) {
+                    xrtBOSync(fpga_bo_c, XCL_BO_SYNC_BO_FROM_DEVICE, (size_t)tile_A_m * TILE_DIM * sizeof(float), 0);
+
+                    for (int r = 0; r < tile_A_m; r++) {
+                        memcpy(C + (i * TILE_DIM + r) * N + j * TILE_DIM,
+                               c_map + r * TILE_DIM,
+                               tile_B_n * sizeof(float));
+                    }
+                }
             }
         }
     }

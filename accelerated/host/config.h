@@ -17,6 +17,10 @@
 // matrix multiplication tile dimension
 #define TILE_DIM 64
 
+// path to the compiled FPGA bitstream and the kernel name within it
+#define FPGA_XCLBIN_PATH "matmul.xclbin"
+#define FPGA_KERNEL_NAME "matmul_krnl"
+
 // terminal output color escape sequences
 #define ANSI_COLOR_YELLOW "\x1b[33m"
 #define ANSI_COLOR_RED    "\x1b[31m"
