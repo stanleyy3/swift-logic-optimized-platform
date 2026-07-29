@@ -5,12 +5,14 @@
 //   streaming vertically
 // - On a positive clock edge, the PE latches the new accumulated value and
 //   makes `a` and `b` availables to downstream PEs
-// - Default multiplication and accumulation widths designed to fit in one
-//   DSP48E2 slice
+// - Operands are IEEE-754 binary32, the accumulated value is fixed-point with
+//   an LSB of weight 2**ACC_LSB (see mac.sv)
 
 module pe #(
-    parameter MUL_WIDTH = 16,
-    parameter ACC_WIDTH = 48
+    parameter MUL_WIDTH = 32,
+    parameter EXP_WIDTH = 8,
+    parameter ACC_WIDTH = 64,
+    parameter ACC_LSB   = -52
 ) (
     input  logic                 clk,
     input  logic                 zero_data,
@@ -21,7 +23,6 @@ module pe #(
     output logic [ACC_WIDTH-1:0] acc
 );
 
-    logic [ACC_WIDTH-1:0] prod;
     logic [ACC_WIDTH-1:0] new_acc;
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -47,7 +48,16 @@ module pe #(
                                                  .d(new_acc),
                                                  .q(acc));
 
-    assign prod = $signed(a_in) * $signed(b_in);
-    assign new_acc = acc + prod;
+    ////////////////////////////////////////////////////////////////////////////////
+    // MULTIPLY-ACCUMULATE
+    ////////////////////////////////////////////////////////////////////////////////
+
+    mac #(.MUL_WIDTH(MUL_WIDTH),
+          .EXP_WIDTH(EXP_WIDTH),
+          .ACC_WIDTH(ACC_WIDTH),
+          .ACC_LSB(ACC_LSB)) mac_unit(.a(a_in),
+                                      .b(b_in),
+                                      .acc_in(acc),
+                                      .acc_out(new_acc));
 
 endmodule
