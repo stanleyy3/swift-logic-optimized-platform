@@ -40,7 +40,9 @@
 │   │   ├── model.h
 │   │   ├── train.c
 │   │   └── train.h
-│   └── device/          # device HDL files
+│   └── device/
+│       ├── rtl/
+│       └── testbench/
 ├── .gitignore
 └── README.md
 ```
