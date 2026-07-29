@@ -30,13 +30,13 @@ module pe_array #(
         for (genvar i = 0; i < ARRAY_DIM; i++) begin
             for (genvar j = 0; j < ARRAY_DIM; j++) begin
                 // output stream values of last row and column are left unconnected
-                pe #(.MUL_WIDTH, .ACC_WIDTH) pe_instance(.clk,
-                                                         .zero_data(zero_data),
-                                                         .a_in((j == 0) ? a_in_values[i] : a_stream[i][j-1]),
-                                                         .b_in((i == 0) ? b_in_values[j] : b_stream[i-1][j]),
-                                                         .a_out(a_stream[i][j]),
-                                                         .b_out(b_stream[i][j]),
-                                                         .acc(acc_values[i][j]));
+                pe #(.MUL_WIDTH(MUL_WIDTH), .ACC_WIDTH(ACC_WIDTH)) pe_instance(.clk,
+                                                                               .zero_data(zero_data),
+                                                                               .a_in((j == 0) ? a_in_values[i] : a_stream[i][j-1]),
+                                                                               .b_in((i == 0) ? b_in_values[j] : b_stream[i-1][j]),
+                                                                               .a_out(a_stream[i][j]),
+                                                                               .b_out(b_stream[i][j]),
+                                                                               .acc(acc_values[i][j]));
             end
         end
     endgenerate
