@@ -91,21 +91,29 @@ void quantize_cols(float *B,
     free(col);
 }
 
-void dequantize_block(int64_t *acc, int acc_stride,
-                      int m, int n,
-                      float *row_scales, float *col_scales,
-                      float *C, int C_stride) {
-    // the accumulators are fixed-point, so undo their LSB weight as well as
-    // the operand scales
-    float acc_lsb_weight = ldexpf(1.f, ACC_LSB);
+void accum_dequantize_block(const f16_t *tiles, int blk_n, int array_dim,
+                            int m, int n,
+                            const float *row_scales, const float *col_scales,
+                            float *C, int C_stride) {
+    int tiles_j = blk_n / array_dim;
 
-    // loop across the block's elements
+    // loop across the block's valid elements
     for (int i = 0; i < m; i++) {
+        // the row's position within its tile is fixed across the whole row, so
+        // only the tile column and the offset within it move in the inner loop
+        int ti = i / array_dim;
+        int ri = i % array_dim;
+        const f16_t *tile_row = tiles + ((size_t)ti * tiles_j) * array_dim * array_dim
+                                + (size_t)ri * array_dim;
+
         for (int j = 0; j < n; j++) {
-            // scale the accumulator down first; it can reach 2**47, and every
-            // factor here is a power of two, so the order costs no accuracy
-            C[i * C_stride + j] = (float)acc[i * acc_stride + j] * acc_lsb_weight
-                                  * row_scales[i] * col_scales[j];
+            int tj = j / array_dim;
+            int cj = j % array_dim;
+
+            float v = f16_to_f32(tile_row[(size_t)tj * array_dim * array_dim + cj]);
+
+            // both scales are powers of two, so these multiplies are exact
+            C[i * C_stride + j] += v * row_scales[i] * col_scales[j];
         }
     }
 }

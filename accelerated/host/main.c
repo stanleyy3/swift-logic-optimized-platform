@@ -106,8 +106,10 @@ int main() {
 
     int user_continue = 1;
 
-    // initiates the buffers
+#if USE_FPGA_MATMUL
+    // opens the device and allocates the block buffers the matmuls launch from
     fpga_init();
+#endif
 
     while (user_continue) {
         // \e[1;1H moves the cursor to row 1, column 1
@@ -166,7 +168,9 @@ int main() {
 
     }
 
+#if USE_FPGA_MATMUL
     fpga_cleanup();
+#endif
 
     return 0;
 }

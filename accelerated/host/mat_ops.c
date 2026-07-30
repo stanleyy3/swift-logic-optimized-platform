@@ -10,16 +10,18 @@
 #include <stdint.h>
 #include <math.h>
 
-#include <xrt.h>
-#include <xrt/xrt_kernel.h>
-#include <xrt/xrt_bo.h>
-
 #include "config.h"
 #include "fpga.h"
 #include "quant.h"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
+// rounds up to the next multiple of the array dimension; control.sv derives its
+// tile counts by truncating division, so a launch dimension that is not a
+// multiple of FPGA_ARRAY_DIM silently loses its leftover rows/columns
+#define ROUND_UP_ARRAY_DIM(x) \
+    ((((x) + FPGA_ARRAY_DIM - 1) / FPGA_ARRAY_DIM) * FPGA_ARRAY_DIM)
 
 void naive_mat_mat_mul(float *A, float *B,
                        int A_m, int A_n, int B_n,
@@ -107,121 +109,135 @@ void tiled_mat_mat_mul(float *restrict A, float *restrict B,
     }
 }
 
+/**
+ * @brief Stages one block of a quantized operand into a device buffer, padding
+ *        the ragged edges with float16 zeros
+ *
+ * The array reads a block as `rows` x `cols` row-major with a row stride of
+ * `cols`, and multiplies the whole padded block regardless of how much of it is
+ * real. An all-zero halfword is float16 +0.0, which the MAC flushes to zero, so
+ * padding contributes nothing to the result and the padded output rows and
+ * columns are simply never read back.
+ *
+ * @param[out] dst       Device buffer to stage into
+ * @param[in]  rows      Padded row count (the launch's dimension)
+ * @param[in]  cols      Padded column count (also the row stride)
+ * @param[in]  src       Quantized source matrix
+ * @param[in]  src_row0  Index of the block's first row within `src`
+ * @param[in]  src_col0  Index of the block's first column within `src`
+ * @param[in]  src_cols  Number of columns per row of `src`
+ * @param[in]  valid_r   Rows of `src` that fall inside the block
+ * @param[in]  valid_c   Columns of `src` that fall inside the block
+ */
+static void stage_block(f16_t *dst, int rows, int cols,
+                        const f16_t *src, int src_row0, int src_col0, int src_cols,
+                        int valid_r, int valid_c) {
+    for (int r = 0; r < valid_r; r++) {
+        memcpy(dst + (size_t)r * cols,
+               src + (size_t)(src_row0 + r) * src_cols + src_col0,
+               (size_t)valid_c * sizeof(f16_t));
+
+        // column tail of a real row
+        memset(dst + (size_t)r * cols + valid_c, 0,
+               (size_t)(cols - valid_c) * sizeof(f16_t));
+    }
+
+    // row tail: whole padding rows
+    memset(dst + (size_t)valid_r * cols, 0,
+           (size_t)(rows - valid_r) * cols * sizeof(f16_t));
+}
+
 void tiled_mat_mat_mul_fpga(float *A, float *B, int M, int K, int N, float *C) {
     // M = A_m, K = A_n, N = B_n
 
-    // Convert both operands to float16 up front rather than per tile. The
-    // scales are per-row of A and per-column of B, so they do not vary along
-    // k: every tile of a given row/column shares a scale, each tile of A is
-    // reused across C's tile columns, and the fixed-point accumulators of
-    // separate k tiles can be summed directly below.
+    // Convert both operands to float16 up front rather than per block. The
+    // scales are per-row of A and per-column of B, so they do not vary along k:
+    // every block of a given row/column shares a scale, which is what lets the
+    // block results be summed below.
     f16_t *A_h = malloc((size_t)M * K * sizeof(f16_t));
     f16_t *B_h = malloc((size_t)K * N * sizeof(f16_t));
     float *A_scales = malloc(M * sizeof(float));
     float *B_scales = malloc(N * sizeof(float));
 
-    quantize_rows(A, M, K, A_h, A_scales);
-    quantize_cols(B, K, N, B_h, B_scales);
-
-    int num_tiles_i = (M + TILE_DIM - 1) / TILE_DIM;
-    int num_tiles_j = (N + TILE_DIM - 1) / TILE_DIM;
-    int num_tiles_k = (K + TILE_DIM - 1) / TILE_DIM;
-
-    f16_t *a_map = xrtBOMap(fpga_bo_a);
-    f16_t *b_map = xrtBOMap(fpga_bo_b);
-    uint64_t *c_map = xrtBOMap(fpga_bo_c);
-
-    if (!a_map || !b_map || !c_map) {
-        fprintf(stderr, "tiled_mat_mat_mul_fpga: failed to map a tile buffer "
-                        "(was fpga_init() called?)\n");
+    if (!A_h || !B_h || !A_scales || !B_scales) {
+        fprintf(stderr, "tiled_mat_mat_mul_fpga: out of memory quantizing a "
+                        "%dx%d by %dx%d matmul\n", M, K, K, N);
         exit(1);
     }
 
-    // running fixed-point total for one tile of C, summed across k in units of
-    // 2**ACC_LSB
-    int64_t *acc_tile = malloc((size_t)TILE_DIM * TILE_DIM * sizeof(int64_t));
+    quantize_rows(A, M, K, A_h, A_scales);
+    quantize_cols(B, K, N, B_h, B_scales);
 
-    // loop across C's tiles
-    for (int i = 0; i < num_tiles_i; i++) {
-        for (int j = 0; j < num_tiles_j; j++) {
-            int tile_A_m = MIN(TILE_DIM, M - i * TILE_DIM);
-            int tile_B_n = MIN(TILE_DIM, N - j * TILE_DIM);
+    f16_t *a_block = fpga_block_a();
+    f16_t *b_block = fpga_block_b();
+    const f16_t *c_block = fpga_block_c();
 
-            memset(acc_tile, 0, (size_t)TILE_DIM * TILE_DIM * sizeof(int64_t));
+    int num_blocks_i = (M + FPGA_BLOCK_DIM - 1) / FPGA_BLOCK_DIM;
+    int num_blocks_j = (N + FPGA_BLOCK_DIM - 1) / FPGA_BLOCK_DIM;
+    int num_blocks_k = (K + FPGA_BLOCK_DIM - 1) / FPGA_BLOCK_DIM;
 
-            // loop across C's tiled matmuls; only one tile of each operand is
-            // ever resident on the device, never the whole of A or B
-            for (int k = 0; k < num_tiles_k; k++) {
-                int tile_A_n = MIN(TILE_DIM, K - k * TILE_DIM);
+    // C is accumulated into, since a K larger than the block dimension arrives
+    // as several block results
+    memset(C, 0, (size_t)M * N * sizeof(float));
 
-                // copy A(i,k) and B(k,j) tiles into the reused tile buffers
-                for (int r = 0; r < tile_A_m; r++) {
-                    memcpy(a_map + r * TILE_DIM,
-                           A_h + (i * TILE_DIM + r) * K + k * TILE_DIM,
-                           tile_A_n * sizeof(f16_t));
-                }
-                for (int r = 0; r < tile_A_n; r++) {
-                    memcpy(b_map + r * TILE_DIM,
-                           B_h + (k * TILE_DIM + r) * N + j * TILE_DIM,
-                           tile_B_n * sizeof(f16_t));
-                }
+    // Loop across C's blocks. The k loop sits outside the j loop so that the A
+    // block, which is indexed by (i,k), stays put across a whole sweep of j -
+    // the array keeps it resident in its large buffer and only reloads B. That
+    // also hoists A's staging and its sync out of the inner loop.
+    for (int i = 0; i < num_blocks_i; i++) {
+        int valid_m = MIN(FPGA_BLOCK_DIM, M - i * FPGA_BLOCK_DIM);
+        int blk_m = ROUND_UP_ARRAY_DIM(valid_m);
 
-                // The array consumes a fixed-depth tile: ARRAY_DIM is a
-                // compile-time parameter of systolic_array.sv, not a runtime
-                // input, so it multiplies and accumulates the whole tile
-                // regardless of tile_A_n. On a short k tile the remainder of
-                // the buffers still holds the previous launch's operands,
-                // which would otherwise be summed into the result, so zero
-                // the padding. An all-zero halfword is float16 +0.0, so a
-                // memset still pads with a value the MAC treats as zero. Both
-                // memsets are no-ops unless k is ragged.
-                for (int r = 0; r < tile_A_m; r++) {
-                    memset(a_map + r * TILE_DIM + tile_A_n, 0,
-                           (size_t)(TILE_DIM - tile_A_n) * sizeof(f16_t));
-                }
-                memset(b_map + (size_t)tile_A_n * TILE_DIM, 0,
-                       (size_t)(TILE_DIM - tile_A_n) * TILE_DIM * sizeof(f16_t));
+        for (int k = 0; k < num_blocks_k; k++) {
+            int valid_k = MIN(FPGA_BLOCK_DIM, K - k * FPGA_BLOCK_DIM);
+            int blk_k = ROUND_UP_ARRAY_DIM(valid_k);
 
-                // B is synced in full, since its zeroed padding rows extend
-                // past tile_A_n and those zeros have to reach the device
-                xrtBOSync(fpga_bo_a, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)tile_A_m * TILE_DIM * sizeof(f16_t), 0);
-                xrtBOSync(fpga_bo_b, XCL_BO_SYNC_BO_TO_DEVICE, (size_t)TILE_DIM * TILE_DIM * sizeof(f16_t), 0);
+            stage_block(a_block, blk_m, blk_k,
+                        A_h, i * FPGA_BLOCK_DIM, k * FPGA_BLOCK_DIM, K,
+                        valid_m, valid_k);
 
-                xrtRunSetArg(fpga_matmul_run, 0, fpga_bo_a);
-                xrtRunSetArg(fpga_matmul_run, 1, fpga_bo_b);
-                xrtRunSetArg(fpga_matmul_run, 2, fpga_bo_c);
-                xrtRunSetArg(fpga_matmul_run, 3, tile_A_m);
-                xrtRunSetArg(fpga_matmul_run, 4, tile_A_n);
-                xrtRunSetArg(fpga_matmul_run, 5, tile_B_n);
-                xrtRunStart(fpga_matmul_run);
-                xrtRunWait(fpga_matmul_run);
+            for (int j = 0; j < num_blocks_j; j++) {
+                int valid_n = MIN(FPGA_BLOCK_DIM, N - j * FPGA_BLOCK_DIM);
+                int blk_n = ROUND_UP_ARRAY_DIM(valid_n);
 
-                xrtBOSync(fpga_bo_c, XCL_BO_SYNC_BO_FROM_DEVICE, (size_t)tile_A_m * TILE_DIM * sizeof(uint64_t), 0);
+                stage_block(b_block, blk_k, blk_n,
+                            B_h, k * FPGA_BLOCK_DIM, j * FPGA_BLOCK_DIM, N,
+                            valid_k, valid_n);
 
-                // The array zeroes its accumulators on every launch, so each
-                // launch yields only this k tile's partial products. Summing
-                // them here is exact: all k tiles share a scale, and every
-                // accumulator uses the same fixed-point LSB weight, so these
-                // are plain integer additions.
-                for (int r = 0; r < tile_A_m; r++) {
-                    for (int c = 0; c < tile_B_n; c++) {
-                        acc_tile[r * TILE_DIM + c] += sign_extend_acc(c_map[r * TILE_DIM + c]);
-                    }
-                }
+                // A only has to be pushed on the first launch of this sweep;
+                // blk_m and blk_k are fixed across it, so the resident copy
+                // stays valid
+                int load_block_en = FPGA_LOAD_B | ((j == 0) ? FPGA_LOAD_A : 0);
+
+                fpga_launch_block(blk_m, blk_k, blk_n, load_block_en);
+
+                // the array accumulated this block's whole K internally; only
+                // the sum across k blocks is left, and it happens here
+                accum_dequantize_block(c_block, blk_n, FPGA_ARRAY_DIM,
+                                       valid_m, valid_n,
+                                       A_scales + i * FPGA_BLOCK_DIM,
+                                       B_scales + j * FPGA_BLOCK_DIM,
+                                       C + (size_t)(i * FPGA_BLOCK_DIM) * N
+                                         + j * FPGA_BLOCK_DIM,
+                                       N);
             }
-
-            dequantize_block(acc_tile, TILE_DIM,
-                             tile_A_m, tile_B_n,
-                             A_scales + i * TILE_DIM, B_scales + j * TILE_DIM,
-                             C + (i * TILE_DIM) * N + j * TILE_DIM, N);
         }
     }
 
-    free(acc_tile);
     free(A_scales);
     free(B_scales);
     free(A_h);
     free(B_h);
+}
+
+void mat_mat_mul(float *A, float *B,
+                 int A_m, int A_n, int B_n,
+                 float *C) {
+#if USE_FPGA_MATMUL
+    tiled_mat_mat_mul_fpga(A, B, A_m, A_n, B_n, C);
+#else
+    tiled_mat_mat_mul(A, B, A_m, A_n, B_n, C);
+#endif
 }
 
 void scal_mat_mul(float a, float *B,

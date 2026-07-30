@@ -37,9 +37,12 @@
 typedef uint16_t f16_t;
 
 // PE accumulator width and the binary weight of its LSB (must match ACC_WIDTH
-// and ACC_LSB in mac.sv); an accumulator value `v` represents `v * 2**ACC_LSB`
+// and ACC_LSB in systolic_array.sv); an accumulator value `v` represents
+// `v * 2**ACC_LSB`. The device applies this weight itself on the way out, so
+// nothing on the normal path needs these - they are here for the software
+// model of the device in device_model.c
 #define ACC_WIDTH 48
-#define ACC_LSB   (-32)
+#define ACC_LSB   (-24)
 
 // binary16 field geometry: unbiased exponents of the largest finite (65504)
 // and smallest normal (2**-14) values, and the bit pattern of 65504
@@ -154,24 +157,6 @@ static inline float f16_to_f32(f16_t h) {
 }
 
 /**
- * @brief Sign-extends an `ACC_WIDTH`-bit accumulator read out of a 64-bit slot
- *
- * The result is still in units of 2**ACC_LSB; `dequantize_block` applies that
- * weight.
- *
- * @param[in] raw Raw 64-bit word holding the accumulator in bits ACC_WIDTH-1:0
- * @return        The accumulator's signed value
- */
-static inline int64_t sign_extend_acc(uint64_t raw) {
-    const uint64_t sign_bit = (uint64_t)1 << (ACC_WIDTH - 1);
-    const uint64_t mask = ((uint64_t)1 << ACC_WIDTH) - 1;
-
-    raw &= mask;
-
-    return (int64_t)((raw ^ sign_bit) - sign_bit);
-}
-
-/**
  * @brief Converts `A` to float16 using one power-of-two scale per row
  *
  * - `A_h` has the same dimensions and layout as `A`
@@ -207,29 +192,38 @@ void quantize_cols(float *B,
                    f16_t *B_h, float *scales);
 
 /**
- * @brief Converts a block of fixed-point accumulators back to float32
+ * @brief De-tiles one block of the array's float16 output, dequantizes it, and
+ *        accumulates it into `C`
  *
- * Applies the accumulator's LSB weight along with both operand scales; all
- * three are powers of two, so this adds no error of its own.
+ * The array writes a block back tile-major - tile `(ti,tj)` at element offset
+ * `(ti*tiles_j + tj) * array_dim**2`, each tile row-major - so this scatters
+ * into row-major `C` as it goes.
  *
- * - `acc` and `C` may have different row strides, so this works equally on a
- *   whole matrix and on one tile addressed within a larger matrix
+ * Accumulates rather than assigns: a matmul whose K exceeds the block dimension
+ * arrives as several block results, and since neither scale depends on `k` they
+ * are summed here. Callers must zero `C` before the first block.
  *
- * - `row_scales` and `col_scales` are indexed tile-locally, so pass pointers
+ * - `m` and `n` are the block's *valid* extent, which may be less than the
+ *   padded `blk_m`/`blk_n` the device was launched with; the padding rows and
+ *   columns are simply not read
+ *
+ * - `row_scales` and `col_scales` are indexed block-locally, so pass pointers
  *   offset to the block's first row and column
  *
- * @param[in]  acc        Accumulators to convert, in units of 2**ACC_LSB
- * @param[in]  acc_stride Number of elements per row of `acc`
- * @param[in]  m          Number of rows in the block
- * @param[in]  n          Number of columns in the block
+ * @param[in]  tiles      Block of float16 results as the device laid them out
+ * @param[in]  blk_n      Padded column count the device was launched with,
+ *                        which sets the tile-major stride
+ * @param[in]  array_dim  Device tile dimension (`FPGA_ARRAY_DIM`)
+ * @param[in]  m          Number of valid rows in the block
+ * @param[in]  n          Number of valid columns in the block
  * @param[in]  row_scales Scales of the first operand's rows (`m` elements)
  * @param[in]  col_scales Scales of the second operand's columns (`n` elements)
- * @param[out] C          Output block
+ * @param[in,out] C       Output block, accumulated into
  * @param[in]  C_stride   Number of elements per row of `C`
  */
-void dequantize_block(int64_t *acc, int acc_stride,
-                      int m, int n,
-                      float *row_scales, float *col_scales,
-                      float *C, int C_stride);
+void accum_dequantize_block(const f16_t *tiles, int blk_n, int array_dim,
+                            int m, int n,
+                            const float *row_scales, const float *col_scales,
+                            float *C, int C_stride);
 
 #endif

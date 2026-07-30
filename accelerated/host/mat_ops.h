@@ -65,6 +65,25 @@ void tiled_mat_mat_mul_fpga(float *A, float *B,
                             float *C);
 
 /**
+ * @brief Computes `C` := `A` @ `B`, on whichever engine `USE_FPGA_MATMUL` selects
+ *
+ * The matmul a training pass calls. Keeping the choice in one place means the
+ * CPU and FPGA paths can be diffed against each other by flipping one flag in
+ * config.h rather than editing call sites.
+ *
+ * @param[in]  A   First input matrix
+ * @param[in]  B   Second input matrix
+ * @param[in]  A_m Number of rows in `A`
+ * @param[in]  A_n Number of columns in `A` (`B` is inferred to have
+ *                 the same number of rows)
+ * @param[in]  B_n Number of columns in `B`
+ * @param[out] C   Output matrix
+ */
+void mat_mat_mul(float *A, float *B,
+                 int A_m, int A_n, int B_n,
+                 float *C);
+
+/**
  * @brief Computes `C` := `a` * `B`
  * 
  * - `a` is a scalar and `B` is a matrix

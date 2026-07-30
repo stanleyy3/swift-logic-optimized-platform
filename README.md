@@ -29,8 +29,14 @@
 │   └── train.h
 ├── accelerated/
 │   ├── host/
+│   │   ├── device_model.c/.h   bit-exact software model of the array
+│   │   ├── fpga.c/.h           device lifecycle and block launches
+│   │   ├── quant.c/.h          float32 <-> float16 conversion and scaling
+│   │   ├── tests/
+│   │   │   └── test_matmul.c
 │   │   └── ...
 │   └── device/
+│       ├── CONTROL_INTERFACE.md  what the packaged RTL kernel must expose
 │       ├── rtl/
 │       │   └── ...
 │       └── testbench/
@@ -41,7 +47,8 @@
 
 ## Dependencies
 
-Just the C standard library!
+The C standard library, plus XRT for the accelerated version when it is built
+against real hardware (`make MODEL=1` needs neither XRT nor a board).
 
 ## Usage
 
@@ -52,6 +59,22 @@ Inside subdirectory of version you want to run (`baseline/` or `accelerated/host
   - Note: the executable is called `traina` for the accelerated version and `trainb` for the baseline version
 
 - To clean build files: `make clean`
+
+### Accelerated version
+
+`accelerated/host/config.h` holds two switches:
+
+- `USE_FPGA_MATMUL` sends the training pass's matmuls to the systolic array
+  instead of the CPU. Off by default, so the two paths can be diffed.
+- `FPGA_MODEL` runs the FPGA path against the bit-exact software model of the
+  array in `device_model.c` rather than hardware. `make MODEL=1` sets it, which
+  also drops the XRT link flags - useful for developing the host off the board.
+
+- To check the FPGA matmul against a float32 reference: `make test`
+  - Runs in model mode, so it needs neither XRT nor a board
+
+The AXI4-Lite register map, DataMover settings and packaging metadata the RTL
+kernel has to expose are specified in `accelerated/device/CONTROL_INTERFACE.md`.
 
 ## Performance notes
 
