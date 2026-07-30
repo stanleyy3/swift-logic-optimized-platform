@@ -29,20 +29,12 @@
 │   └── train.h
 ├── accelerated/
 │   ├── host/
-│   │   ├── Makefile
-│   │   ├── config.h
-│   │   ├── data_ops.c
-│   │   ├── data_ops.h
-│   │   ├── main.c
-│   │   ├── mat_ops.c
-│   │   ├── mat_ops.h
-│   │   ├── model.c
-│   │   ├── model.h
-│   │   ├── train.c
-│   │   └── train.h
+│   │   └── ...
 │   └── device/
 │       ├── rtl/
+│       │   └── ...
 │       └── testbench/
+│           └── ...
 ├── .gitignore
 └── README.md
 ```
