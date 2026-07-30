@@ -9,24 +9,11 @@ LDLIBS = -lm
 # e.g. `make XILINX_XRT=/usr`)
 ifeq ($(shell pkg-config --exists xrt && echo yes),yes)
 CFLAGS += $(shell pkg-config --cflags xrt)
-LDLIBS += $(shell pkg-config --libs xrt)
+LDLIBS += $(shell pkg-config --libs xrt) -luuid
 else
 XILINX_XRT ?= /opt/xilinx/xrt
 CFLAGS += -I$(XILINX_XRT)/include
-LDLIBS += -L$(XILINX_XRT)/lib -lxrt_coreutil
-endif
-
-# XRT's xclbin.h includes <uuid/uuid.h> just to typedef its xuid_t. That header
-# comes from the uuid-dev package, which a stock Kria image lacks even though
-# the runtime libuuid.so.1 is present. Ask the compiler whether it can find the
-# real header, and only fall back to the local stand-in if it cannot, so
-# installing uuid-dev later takes precedence with no change here.
-HAVE_UUID_H := $(shell echo '\#include <uuid/uuid.h>' | $(CC) -E -xc - >/dev/null 2>&1 && echo yes)
-
-ifeq ($(HAVE_UUID_H),yes)
-LDLIBS += -luuid
-else
-CFLAGS += -Icompat
+LDLIBS += -L$(XILINX_XRT)/lib -lxrt_coreutil -luuid
 endif
 
 TARGET = traina
