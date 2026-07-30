@@ -1,10 +1,10 @@
 // mac.sv -- Floating-point multiply-accumulate unit
 //
 // - Purely combinational; the accumulator register lives in the parent
-// - Operands are IEEE-754 binary32, the accumulator is a fixed-point value
+// - Operands are floating-point, the accumulator is a fixed-point value
 //   whose LSB has a weight of 2**ACC_LSB
-// - The mantissa product is exact (24x24 -> 48 bits, two DSP48E2 slices); only
-//   the alignment shift discards bits, and only below 2**ACC_LSB
+// - The mantissa product is exact; only the alignment shift discards bits, and
+//   only below 2**ACC_LSB
 // - Subnormal operands are flushed to zero, matching the Vivado FP Operator
 // - Infinities and NaNs are not handled
 //

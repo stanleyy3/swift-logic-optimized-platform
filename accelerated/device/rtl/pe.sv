@@ -5,7 +5,7 @@
 //   streaming vertically
 // - On a positive clock edge, the PE latches the new accumulated value and
 //   makes `a` and `b` availables to downstream PEs
-// - Operands are IEEE-754 binary32, the accumulated value is fixed-point with
+// - Operands are floating-point, the accumulated value is fixed-point with
 //   an LSB of weight 2**ACC_LSB (see mac.sv)
 //
 // *Datatype described here may have changed

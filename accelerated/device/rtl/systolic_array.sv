@@ -1,13 +1,19 @@
 // systolic_array.sv -- Systolic array (top module)
 //
 // - Floating-point MACs
+//
+// (DO NOT DELETE)
+// - Configuration for fp32:
+//   - X, 32, 8, 64, -52
+// - Configuration for fp16:
+//   - X, 16, 5, 48, -24
 
 module systolic_array #(
-    parameter ARRAY_DIM = 8,
-    parameter MUL_WIDTH = 16, // 32
-    parameter EXP_WIDTH = 5,  // 8
-    parameter ACC_WIDTH = 48, // 64
-    parameter ACC_LSB = -24   // -52
+    parameter ARRAY_DIM = 16,
+    parameter MUL_WIDTH = 16,
+    parameter EXP_WIDTH = 5,
+    parameter ACC_WIDTH = 48,
+    parameter ACC_LSB = -24
 ) (
     input  logic                 clk,
     input  logic                 rst,
