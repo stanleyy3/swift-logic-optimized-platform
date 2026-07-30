@@ -11,10 +11,10 @@
 // *Datatype described here may have changed
 
 module pe #(
-    parameter MUL_WIDTH = 32,
-    parameter EXP_WIDTH = 8,
-    parameter ACC_WIDTH = 64,
-    parameter ACC_LSB   = -52
+    parameter MUL_WIDTH,
+    parameter EXP_WIDTH,
+    parameter ACC_WIDTH,
+    parameter ACC_LSB
 ) (
     input  logic                 clk,
     input  logic                 zero_data,

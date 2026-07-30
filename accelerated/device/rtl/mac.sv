@@ -11,10 +11,10 @@
 // *Datatype described here may have changed
 
 module mac #(
-    parameter MUL_WIDTH = 32,
-    parameter EXP_WIDTH = 8,
-    parameter ACC_WIDTH = 64,
-    parameter ACC_LSB   = -52
+    parameter MUL_WIDTH,
+    parameter EXP_WIDTH,
+    parameter ACC_WIDTH,
+    parameter ACC_LSB
 ) (
     input  logic [MUL_WIDTH-1:0] a,
     input  logic [MUL_WIDTH-1:0] b,

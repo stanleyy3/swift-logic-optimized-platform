@@ -3,8 +3,8 @@
 // - One set of skew registers for one side of input to PE array
 
 module skew_regs #(
-    parameter ARRAY_DIM = 4,
-    parameter MUL_WIDTH = 32
+    parameter ARRAY_DIM,
+    parameter MUL_WIDTH
 ) (
     input  logic clk,
     input  logic zero_data,
