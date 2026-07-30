@@ -55,7 +55,7 @@ module systolic_array_tb;
     logic [ADDR_WIDTH-1:0]  a_block_addr, b_block_addr, c_block_addr;
     logic [BLK_WIDTH-1:0]   blk_m, blk_k, blk_n;
     logic [1:0]             load_block_en;
-    logic                   start_ovr_comp, done_ovr_comp, error_ovr_comp;
+    logic                   start_blk_comp, done_blk_comp, error_blk_comp;
 
     logic [CMD_WIDTH-1:0]   mm2s_cmd_tdata;
     logic                   mm2s_cmd_tvalid, mm2s_cmd_tready;
@@ -252,8 +252,8 @@ module systolic_array_tb;
             end
         end
 
-        if (error_ovr_comp !== 1'b0) begin
-            $display("  %s: error_ovr_comp asserted", label);
+        if (error_blk_comp !== 1'b0) begin
+            $display("  %s: error_blk_comp asserted", label);
             case_errors = case_errors + 1;
         end
 
@@ -272,13 +272,13 @@ module systolic_array_tb;
         load_block_en[0] = ~reuse_a;
         load_block_en[1] = 1'b1;
 
-        start_ovr_comp = 1'b1;
+        start_blk_comp = 1'b1;
         @(posedge clk);
         #1;
 
-        wait (done_ovr_comp === 1'b1);
+        wait (done_blk_comp === 1'b1);
 
-        start_ovr_comp = 1'b0;
+        start_blk_comp = 1'b0;
         @(posedge clk);
         #1;
     endtask
@@ -300,7 +300,7 @@ module systolic_array_tb;
 
     initial begin
         stall_pct        = 8'd0;
-        start_ovr_comp   = 1'b0;
+        start_blk_comp   = 1'b0;
         load_block_en[0] = 1'b1;
         load_block_en[1] = 1'b1;
         a_block_addr     = A_ADDR;

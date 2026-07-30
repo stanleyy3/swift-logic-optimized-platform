@@ -9,3 +9,18 @@
 vivado*
 
 **/test_matmul
+
+# Vivado/Vitis kernel build byproducts (accelerated/device/build/)
+accelerated/device/build/matmul_krnl_proj/
+accelerated/device/build/matmul_krnl_ip/
+accelerated/device/build/.Xil/
+accelerated/device/build/_x/
+accelerated/device/build/.ipcache/
+accelerated/device/build/*.xo
+accelerated/device/build/*.xclbin
+accelerated/device/build/*.log
+accelerated/device/build/*.jou
+accelerated/device/build/xsim.dir/
+accelerated/device/build/*.wdb
+accelerated/device/build/emconfig.json
+accelerated/device/build/sd_card*/

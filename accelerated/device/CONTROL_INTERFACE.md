@@ -84,7 +84,7 @@ cannot move the block geometry under a running FSM.
 | BTT width | 23 | the `mm2s_cmd_bytes`/`s2mm_cmd_bytes` field |
 | Command/status interface | AXI4-Stream | what the command word packing expects |
 | Data Realignment Engine | **disabled** | `systolic_array.sv:165-181` hardcodes `DRR=0`, `DSA=0` |
-| Store-and-forward | off | not needed; the design backpressures |
+| Store-and-forward | **forced on** | PG022 always enables it when the memory-map width (64) differs from the stream width (16), which it does here; this is what performs the 16<->64 bit width conversion and doesn't affect any addressing invariant below |
 
 Disabling the DRE means addresses and byte counts must be aligned to the
 memory-map data width. That holds for free here and is worth preserving:
@@ -101,16 +101,26 @@ invariant breaks and the DRE has to be turned on.
 ## Packaging
 
 The three pointer arguments must be declared as `global` memory pointers bound
-to the DataMover's `m_axi` bundle in `kernel.xml`. That is what makes
+to a DataMover `m_axi` port in `kernel.xml`. That is what makes
 `xrtRunSetArg(run, i, bo)` write the buffer's **device** address into the
 register - the DataMover masters DDR itself and cannot see host virtual
 addresses. It is also what gives `xrtKernelArgGroupId` a memory bank to report,
 which is how `fpga_init` places the buffers in the bank the DataMover reaches.
 
+The generated DataMover IP exposes **two separate** AXI4 master ports, not
+one shared bus: MM2S is read-only (AR/R channels only) and S2MM is
+write-only (AW/W/B channels only). `c_single_interface` does not merge them
+into a single bus (confirmed by inspecting the generated `.veo` - the port
+list is unchanged with it set either way). So `a_block`/`b_block` (read by
+MM2S) bind to one port and `c_block` (written by S2MM) binds to the other;
+both are linked to the same memory bank (`HP0`) in the `v++` connectivity
+config, so this is invisible to the host - it still just calls
+`xrtKernelArgGroupId` per argument and gets a bank it can allocate from.
+
 ```xml
-<arg name="a_block"       addressQualifier="1" id="0" port="m_axi_gmem" size="0x8" offset="0x10" hostOffset="0x0" hostSize="0x8" type="ushort*"/>
-<arg name="b_block"       addressQualifier="1" id="1" port="m_axi_gmem" size="0x8" offset="0x1C" hostOffset="0x0" hostSize="0x8" type="ushort*"/>
-<arg name="c_block"       addressQualifier="1" id="2" port="m_axi_gmem" size="0x8" offset="0x28" hostOffset="0x0" hostSize="0x8" type="ushort*"/>
+<arg name="a_block"       addressQualifier="1" id="0" port="m_axi_gmem"  size="0x8" offset="0x10" hostOffset="0x0" hostSize="0x8" type="ushort*"/>
+<arg name="b_block"       addressQualifier="1" id="1" port="m_axi_gmem"  size="0x8" offset="0x1C" hostOffset="0x0" hostSize="0x8" type="ushort*"/>
+<arg name="c_block"       addressQualifier="1" id="2" port="m_axi_gmem1" size="0x8" offset="0x28" hostOffset="0x0" hostSize="0x8" type="ushort*"/>
 <arg name="blk_m"         addressQualifier="0" id="3" port="s_axi_control" size="0x4" offset="0x34" hostOffset="0x0" hostSize="0x4" type="uint"/>
 <arg name="blk_k"         addressQualifier="0" id="4" port="s_axi_control" size="0x4" offset="0x3C" hostOffset="0x0" hostSize="0x4" type="uint"/>
 <arg name="blk_n"         addressQualifier="0" id="5" port="s_axi_control" size="0x4" offset="0x44" hostOffset="0x0" hostSize="0x4" type="uint"/>
