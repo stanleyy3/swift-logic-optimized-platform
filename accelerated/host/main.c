@@ -10,6 +10,7 @@
 
 #include "train.h"
 #include "config.h"
+#include "fpga.h"
 
 /**
  * @brief Gets hyperparameters from user through terminal
@@ -105,6 +106,9 @@ int main() {
 
     int user_continue = 1;
 
+    // initiates the buffers
+    fpga_init();
+
     while (user_continue) {
         // \e[1;1H moves the cursor to row 1, column 1
         // \e[2J clears the entire screen
@@ -161,6 +165,8 @@ int main() {
         printf("\n");
 
     }
+
+    fpga_cleanup();
 
     return 0;
 }

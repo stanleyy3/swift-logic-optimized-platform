@@ -1,6 +1,21 @@
 CC = gcc
+
 CFLAGS = -fopenmp -O3 -Wall -Wextra -MMD -MP -march=native
 LDLIBS = -lm
+
+# requires XRT to be installed (e.g. build directly on the KV260, which
+# already has it). Prefer pkg-config since XRT's install prefix varies by
+# image; fall back to XILINX_XRT (override if it's installed elsewhere,
+# e.g. `make XILINX_XRT=/usr`)
+ifeq ($(shell pkg-config --exists xrt && echo yes),yes)
+CFLAGS += $(shell pkg-config --cflags xrt)
+LDLIBS += $(shell pkg-config --libs xrt) -luuid
+else
+XILINX_XRT ?= /opt/xilinx/xrt
+CFLAGS += -I$(XILINX_XRT)/include
+LDLIBS += -L$(XILINX_XRT)/lib -lxrt_coreutil -luuid
+endif
+
 TARGET = traina
 
 # optionally add profiling flags
