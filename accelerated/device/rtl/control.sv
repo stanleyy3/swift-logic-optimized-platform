@@ -1,6 +1,6 @@
 // control.sv -- Control
 //
-// - One block matmul per 'start_ovr_comp': C := A @ B, where A is blk_m x blk_k
+// - One block matmul per 'start_blk_comp': C := A @ B, where A is blk_m x blk_k
 //   and B is blk_k x blk_n, all of which must be multiples of ARRAY_DIM and no
 //   greater than LARGE_BUFFER_DIM
 // - The host schedules blocks and accumulates across the overall K dimension;
@@ -23,8 +23,8 @@
 // - C block: tile-major, tile (ti,tj) at element offset
 //   (ti*tiles_j + tj)*ARRAY_DIM**2, each tile row-major
 //
-// - The block descriptor inputs must be held stable from 'start_ovr_comp' until
-//   'done_ovr_comp'
+// - The block descriptor inputs must be held stable from 'start_blk_comp' until
+//   'done_blk_comp'
 
 module control #(
     parameter LARGE_BUFFER_DIM,
@@ -41,9 +41,9 @@ module control #(
     input  logic [$clog2(LARGE_BUFFER_DIM):0]   blk_k,
     input  logic [$clog2(LARGE_BUFFER_DIM):0]   blk_n,
     input  logic [1:0]                          load_block_en,
-    input  logic                                start_ovr_comp,
-    output logic                                done_ovr_comp,
-    output logic                                error_ovr_comp,
+    input  logic                                start_blk_comp,
+    output logic                                done_blk_comp,
+    output logic                                error_blk_comp,
     output logic                                large_bufs_write_en            [0:1],
     output logic [$clog2(LARGE_BUFFER_DIM)-1:0] large_bufs_write_addrs         [0:1][0:1],
     output logic [$clog2(LARGE_BUFFER_DIM)-1:0] large_bufs_read_addrs          [0:1][0:1],
@@ -156,7 +156,7 @@ module control #(
 
     always_comb begin
         case (state)
-            S_IDLE:      if (!start_ovr_comp)      next_state = S_IDLE;
+            S_IDLE:      if (!start_blk_comp)      next_state = S_IDLE;
                          else if (load_block_en[0]) next_state = S_A_CMD;
                          else if (load_block_en[1]) next_state = S_B_CMD;
                          else                       next_state = S_TILE_INIT;
@@ -185,13 +185,13 @@ module control #(
             S_SNAP:      next_state = last_tile ? S_WAIT_LAST : S_TILE_INIT;
 
             S_WAIT_LAST: next_state = wb_busy ? S_WAIT_LAST : S_DONE;
-            S_DONE:      next_state = start_ovr_comp ? S_DONE : S_IDLE;
+            S_DONE:      next_state = start_blk_comp ? S_DONE : S_IDLE;
 
             default:     next_state = S_IDLE;
         endcase
     end
 
-    assign done_ovr_comp = (state == S_DONE);
+    assign done_blk_comp = (state == S_DONE);
 
     assign tiles_i = TILE_CNT_WIDTH'(blk_m >> SB_ADDR_WIDTH);
     assign tiles_j = TILE_CNT_WIDTH'(blk_n >> SB_ADDR_WIDTH);
@@ -383,7 +383,7 @@ module control #(
     assign wb_cmd_accepted = s2mm_cmd_valid & s2mm_cmd_ready;
 
     assign next_c_addr = (state == S_IDLE) ? c_block_addr : (c_addr + ADDR_WIDTH'(TILE_BYTES));
-    assign c_addr_en   = ((state == S_IDLE) & start_ovr_comp) | wb_cmd_accepted;
+    assign c_addr_en   = ((state == S_IDLE) & start_blk_comp) | wb_cmd_accepted;
 
     flop_en #(.WIDTH(ADDR_WIDTH)) c_addr_reg(.clk,
                                              .en(c_addr_en),
@@ -429,12 +429,12 @@ module control #(
     assign sts_error = (mm2s_sts_accepted & (mm2s_sts_tdata[7:4] != 4'b1000))
                      | (s2mm_sts_accepted & (s2mm_sts_tdata[7:4] != 4'b1000));
 
-    assign error_clear = rst | ((state == S_IDLE) & start_ovr_comp);
+    assign error_clear = rst | ((state == S_IDLE) & start_blk_comp);
 
     flop_enr #(.WIDTH(1), .RST(0)) error_reg(.clk,
                                              .rst(error_clear),
                                              .en(sts_error),
                                              .d(1'b1),
-                                             .q(error_ovr_comp));
+                                             .q(error_blk_comp));
 
 endmodule

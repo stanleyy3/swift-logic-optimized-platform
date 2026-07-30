@@ -8,7 +8,7 @@
 // - tile: output sub-matrix that is produced within PEs across slice passes
 // - slice: a partial sum of a tile
 //
-// - One block matmul per 'start_ovr_comp'; the host schedules blocks and
+// - One block matmul per 'start_blk_comp'; the host schedules blocks and
 //   accumulates across the overall K dimension (see control.sv for the memory
 //   layout the host has to produce)
 // - The memory-side interface is an AXI DataMover (PG022), which is instantiated
@@ -44,9 +44,9 @@ module systolic_array #(
     input  logic [$clog2(LARGE_BUFFER_DIM):0] blk_k,
     input  logic [$clog2(LARGE_BUFFER_DIM):0] blk_n,
     input  logic [1:0]                        load_block_en,
-    input  logic                              start_ovr_comp,
-    output logic                              done_ovr_comp,
-    output logic                              error_ovr_comp,
+    input  logic                              start_blk_comp,
+    output logic                              done_blk_comp,
+    output logic                              error_blk_comp,
     output logic [`DATAMOVER_CMD_WIDTH-1:0]   mm2s_cmd_tdata,
     output logic                              mm2s_cmd_tvalid,
     input  logic                              mm2s_cmd_tready,
@@ -117,9 +117,9 @@ module systolic_array #(
                                                            .blk_k,
                                                            .blk_n,
                                                            .load_block_en,
-                                                           .start_ovr_comp,
-                                                           .done_ovr_comp,
-                                                           .error_ovr_comp,
+                                                           .start_blk_comp,
+                                                           .done_blk_comp,
+                                                           .error_blk_comp,
                                                            .large_bufs_write_en,
                                                            .large_bufs_write_addrs,
                                                            .large_bufs_read_addrs,
