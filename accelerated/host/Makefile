@@ -16,9 +16,21 @@ ifeq ($(shell pkg-config --exists xrt && echo yes),yes)
 CFLAGS += $(shell pkg-config --cflags xrt)
 LDLIBS += $(shell pkg-config --libs xrt) -luuid
 else
-XILINX_XRT ?= /opt/xilinx/xrt
-CFLAGS += -I$(XILINX_XRT)/include
-LDLIBS += -L$(XILINX_XRT)/lib -lxrt_coreutil -luuid
+# Two install layouts exist and they put xrt.h in different places:
+#
+#   AMD tarball   /opt/xilinx/xrt/include/xrt.h  + include/xrt/xrt_kernel.h
+#   Ubuntu `xrt`  /usr/include/xrt/xrt.h         + /usr/include/xrt/xrt_kernel.h
+#
+# The sources use both `#include <xrt.h>` and `#include <xrt/xrt_kernel.h>`, so
+# put <prefix>/include *and* <prefix>/include/xrt on the search path -- that
+# satisfies both spellings under either layout. The KV260's Certified Ubuntu
+# image ships the Ubuntu package (`dpkg -l xrt` -> 2.18.0-0ubuntu1, prefix
+# /usr), which is why the prefix is auto-detected rather than assumed.
+XILINX_XRT ?= $(if $(wildcard /opt/xilinx/xrt/include),/opt/xilinx/xrt,/usr)
+CFLAGS += -I$(XILINX_XRT)/include -I$(XILINX_XRT)/include/xrt
+# no -L for a /usr prefix: the loader's default paths already cover the
+# multiarch lib dir the Ubuntu package installs into
+LDLIBS += $(if $(filter /usr,$(XILINX_XRT)),,-L$(XILINX_XRT)/lib) -lxrt_coreutil -luuid
 endif
 endif
 
