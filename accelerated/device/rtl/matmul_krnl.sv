@@ -17,7 +17,7 @@
 
 module matmul_krnl #(
     parameter LARGE_BUFFER_DIM = 256,
-    parameter ARRAY_DIM        = 8,
+    parameter ARRAY_DIM        = 16,
     parameter MUL_WIDTH        = 16,
     parameter EXP_WIDTH        = 5,
     parameter ACC_WIDTH        = 48,

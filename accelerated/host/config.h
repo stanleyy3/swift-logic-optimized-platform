@@ -32,7 +32,7 @@
 // Must match the parameters systolic_array.sv is elaborated with; the device
 // has no way to report a mismatch. See the "Configuration for fp16" note at the
 // top of systolic_array.sv.
-#define FPGA_ARRAY_DIM        8
+#define FPGA_ARRAY_DIM        16
 #define FPGA_LARGE_BUFFER_DIM 256
 
 // Block dimension the host schedules with: no greater than

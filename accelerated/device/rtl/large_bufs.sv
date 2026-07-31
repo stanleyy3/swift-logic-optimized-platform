@@ -8,8 +8,9 @@
 //   always BUFFER_DIM, so every address is a plain concatenation of a row and a
 //   column counter
 // - Each region is split across NUM_BANKS banks selected by the low bits of the
-//   row address, which keeps each inferred block RAM a few deep instead of one
-//   32-deep cascade
+//   row address, which keeps each inferred block RAM a shallow cascade rather
+//   than one very deep one: in the shipped configuration a bank is 4096x16 and
+//   maps to 2 RAMB36, for 64 RAMB36 across both regions
 // - Banking is invisible from the outside: every bank reads every cycle and the
 //   delayed bank select picks one, so a read still costs exactly one cycle and the
 //   contents are addressed exactly as if the region were undivided
@@ -40,11 +41,14 @@ module large_bufs #(
     output logic [ELEM_SIZE-1:0]          read_data   [0:1]
 );
 
+    // trailing values are for the shipped configuration: systolic_array
+    // instantiates this with BUFFER_DIM = LARGE_BUFFER_DIM = 256 and
+    // NUM_BANKS = ARRAY_DIM = 16
     localparam ADDR_WIDTH = $clog2(BUFFER_DIM);                    // 8
-    localparam SEL_WIDTH  = $clog2(NUM_BANKS);                     // 2
-    localparam BANK_ROWS  = BUFFER_DIM / NUM_BANKS;                // 64 rows per bank
-    localparam BANK_DEPTH = BANK_ROWS * BUFFER_DIM;                // 16384 elements
-    localparam BANK_WIDTH = $clog2(BANK_DEPTH);                    // 14
+    localparam SEL_WIDTH  = $clog2(NUM_BANKS);                     // 4
+    localparam BANK_ROWS  = BUFFER_DIM / NUM_BANKS;                // 16 rows per bank
+    localparam BANK_DEPTH = BANK_ROWS * BUFFER_DIM;                // 4096 elements
+    localparam BANK_WIDTH = $clog2(BANK_DEPTH);                    // 12
 
     logic [BANK_WIDTH-1:0] bank_write_addrs [0:1];
     logic [SEL_WIDTH-1:0]  write_bank_sels  [0:1];

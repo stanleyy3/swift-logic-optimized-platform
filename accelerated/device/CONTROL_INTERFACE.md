@@ -142,7 +142,7 @@ side without the other produces wrong results with no diagnostic.
 | Parameter | fp16 (current) | fp32 |
 |---|---|---|
 | `LARGE_BUFFER_DIM` | 256 | 256 |
-| `ARRAY_DIM` | 8 | 8 |
+| `ARRAY_DIM` | 16 | 16 |
 | `MUL_WIDTH` | 16 | 32 |
 | `EXP_WIDTH` | 5 | 8 |
 | `ACC_WIDTH` | 48 | 64 |

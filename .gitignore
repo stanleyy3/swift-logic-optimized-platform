@@ -1,6 +1,10 @@
 .DS_Store
 
-**/build/
+# Host/baseline object directories. These are named the same as the device
+# kernel's build directory, but that one holds sources as well as output, so it
+# cannot be ignored wholesale -- see the bottom of this file.
+accelerated/host/build/
+baseline/build/
 */gmon.out
 
 **/trainb
@@ -10,16 +14,31 @@ vivado*
 
 **/test_matmul
 
-# Vivado/Vitis kernel build byproducts (accelerated/device/build/)
+# Vivado/Vitis kernel build byproducts (accelerated/device/build/).
+#
+# The build *scripts* that live in this directory -- gen_ip.tcl,
+# check_synth.tcl, package_kernel.tcl and link.cfg -- are sources, not output:
+# they are how the .xo and the xclbin are reproduced from a clean clone. Only
+# tool output is ignored below.
 accelerated/device/build/matmul_krnl_proj/
 accelerated/device/build/matmul_krnl_ip/
 accelerated/device/build/.Xil/
 accelerated/device/build/_x/
 accelerated/device/build/.ipcache/
+accelerated/device/build/reports/
+accelerated/device/build/logs/
+accelerated/device/build/firmware/
 accelerated/device/build/*.xo
+accelerated/device/build/*.xo.bak*
 accelerated/device/build/*.xclbin
+accelerated/device/build/*.xclbin.*
+accelerated/device/build/*.bit
+accelerated/device/build/*.bit.bin
+accelerated/device/build/*.bif
 accelerated/device/build/*.log
 accelerated/device/build/*.jou
+accelerated/device/build/*.pb
+accelerated/device/build/*.pb3
 accelerated/device/build/xsim.dir/
 accelerated/device/build/*.wdb
 accelerated/device/build/emconfig.json
