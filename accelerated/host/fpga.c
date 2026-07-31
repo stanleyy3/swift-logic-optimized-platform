@@ -148,7 +148,9 @@ void fpga_init(void) {
     }
 
     xuid_t uuid;
-    if (xrtDeviceLoadXclbin(fpga_dev, FPGA_XCLBIN_PATH)) {
+    // ...File(), not xrtDeviceLoadXclbin(), which takes an already-read axlf
+    // image rather than a path
+    if (xrtDeviceLoadXclbinFile(fpga_dev, FPGA_XCLBIN_PATH)) {
         fprintf(stderr, "fpga_init: failed to load xclbin '%s'\n", FPGA_XCLBIN_PATH);
         exit(1);
     }
