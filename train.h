@@ -1,6 +1,6 @@
 /**
  * train.h - Manages an MLP training run
- * 
+ *
  * Main training logic
  */
 
@@ -9,20 +9,39 @@
 
 #include <stdbool.h>
 
+// most hidden layers a run may have
+#define MAX_HIDDEN_LAYERS 3
+
+// everything that describes one training run
+// note: `hidden_layer_dims` is an embedded array, so a configuration can be
+//       copied by assignment and needs no allocation
+typedef struct {
+    int num_hidden_layers;
+    int hidden_layer_dims[MAX_HIDDEN_LAYERS];
+
+    int num_epochs;
+    int batch_size;
+    float learning_rate;
+} TrainConfig;
+
+/**
+ * @brief Fills in a known-good starting configuration
+ *
+ * @param[out] cfg Configuration to fill
+ */
+void train_default_config(TrainConfig *cfg);
+
 /**
  * @brief Trains a basic MLP for MNIST end-to-end
- * 
- * - Gives training and test loss updates
- * 
- * @param[in] num_hidden_layers Number of hidden layers
- * @param[in] hidden_layer_dims Dimensions of hidden layers
- * @param[in] num_epochs        Number of epochs
- * @param[in] batch_size        Size of batch
- * @param[in] learning_rate     Learning rate
- * @param[in] rand_seed_rand    Whether to randomize the seed for RNG
+ *
+ * - Reports progress, accuracy history and completion through metrics.h; writes
+ * nothing to the terminal, so it can run on a worker thread while the UI draws
+ *
+ * - Checks for a requested stop and for a pause once per iteration
+ *
+ * @param[in] cfg            Configuration for the run
+ * @param[in] rand_seed_rand Whether to randomize the seed for RNG
  */
-void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
-                 int num_epochs, int batch_size, float learning_rate,
-                 bool rand_seed_rand);
+void train_MNIST(const TrainConfig *cfg, bool rand_seed_rand);
 
 #endif

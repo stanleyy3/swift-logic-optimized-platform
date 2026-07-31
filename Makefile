@@ -1,6 +1,9 @@
 CC = gcc
-CFLAGS = -O2 -Wall -Wextra -MMD -MP
-LDLIBS = -lm
+# note: -pthread is for the interface only - the UI runs on the main thread while
+#       training runs on a worker. The compute flags are deliberately left alone:
+#       no -fopenmp and no -O3, because this branch is the slow reference point.
+CFLAGS = -O2 -pthread -Wall -Wextra -MMD -MP
+LDLIBS = -lm -pthread
 TARGET = train
 
 # optionally add profiling flags
@@ -11,7 +14,8 @@ endif
 BUILD_DIR = build
 
 # get .o and .d dependencies
-SRCS = $(wildcard *.c)
+# note: all terminal user interface code lives in tui/
+SRCS = $(wildcard *.c) $(wildcard tui/*.c)
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SRCS:%.c=$(BUILD_DIR)/%.d)
 
@@ -24,6 +28,7 @@ $(TARGET): $(OBJS)
 
 # compile .c files into .o files
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # create build directory if it doesn't exist
