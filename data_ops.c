@@ -12,6 +12,34 @@
 
 #include "config.h"
 
+// dataset files, in the order the loader reads them
+#if DATASET == 0
+static const char *const data_paths[NUM_DATA_FILES] = {
+    "data/mnist/train-images.idx3-ubyte",
+    "data/mnist/train-labels.idx1-ubyte",
+    "data/mnist/test-images.idx3-ubyte",
+    "data/mnist/test-labels.idx1-ubyte"
+};
+#elif DATASET == 1
+static const char *const data_paths[NUM_DATA_FILES] = {
+    "data/fashion_mnist/train-images.idx3-ubyte",
+    "data/fashion_mnist/train-labels.idx1-ubyte",
+    "data/fashion_mnist/test-images.idx3-ubyte",
+    "data/fashion_mnist/test-labels.idx1-ubyte"
+};
+#endif
+
+const char *missing_data_file(void) {
+    for (int i = 0; i < NUM_DATA_FILES; i++) {
+        FILE *f = fopen(data_paths[i], "rb");
+        if (!f) return data_paths[i];
+
+        fclose(f);
+    }
+
+    return NULL;
+}
+
 static void check_read_error(size_t num_read, size_t count, FILE *stream) {
     if (num_read < count) {
         if (ferror(stream)) {
@@ -35,19 +63,10 @@ static uint32_t swap_endian32(uint32_t val) {
 void init_data_MNIST(Dataset *train_set, Dataset *test_set,
                      int *train_set_size, int *test_set_size) {
 
-#if DATASET == 0
-    // MNIST dataset
-    char *train_input_path = "data/mnist/train-images.idx3-ubyte";
-    char *train_labels_path = "data/mnist/train-labels.idx1-ubyte";
-    char *test_input_path = "data/mnist/test-images.idx3-ubyte";
-    char *test_labels_path = "data/mnist/test-labels.idx1-ubyte";
-#elif DATASET == 1
-    // Fashion MNIST dataset
-    char *train_input_path = "data/fashion_mnist/train-images.idx3-ubyte";
-    char *train_labels_path = "data/fashion_mnist/train-labels.idx1-ubyte";
-    char *test_input_path = "data/fashion_mnist/test-images.idx3-ubyte";
-    char *test_labels_path = "data/fashion_mnist/test-labels.idx1-ubyte";
-#endif
+    const char *train_input_path = data_paths[0];
+    const char *train_labels_path = data_paths[1];
+    const char *test_input_path = data_paths[2];
+    const char *test_labels_path = data_paths[3];
 
     unsigned char magic_bytes[4];
     int num_dims;

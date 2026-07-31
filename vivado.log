@@ -1,0 +1,54 @@
+#-----------------------------------------------------------
+# Vivado v2025.2 (64-bit)
+# SW Build 6299465 on Fri Nov 14 12:34:56 MST 2025
+# IP Build 6300035 on Fri Nov 14 10:48:45 MST 2025
+# SharedData Build 6298862 on Thu Nov 13 04:50:51 MST 2025
+# Start of session at: Thu Jul 30 17:44:19 2026
+# Process ID         : 111357
+# Current directory  : /afs/andrew.cmu.edu/usr18/davidwa4/private/18240/swift-logic-optimized-platform
+# Command line       : vivado
+# Log file           : /afs/andrew.cmu.edu/usr18/davidwa4/private/18240/swift-logic-optimized-platform/vivado.log
+# Journal file       : /afs/andrew.cmu.edu/usr18/davidwa4/private/18240/swift-logic-optimized-platform/vivado.jou
+# Running On         : hh-1305-12.lan.local.cmu.edu
+# Platform           : RedHatEnterprise
+# Operating System   : Red Hat Enterprise Linux release 8.10 (Ootpa)
+# Processor Detail   : 12th Gen Intel(R) Core(TM) i7-12700
+# CPU Frequency      : 2100.000 MHz
+# CPU Physical cores : 12
+# CPU Logical cores  : 20
+# Host memory        : 33109 MB
+# Swap memory        : 17179 MB
+# Total Virtual      : 50289 MB
+# Available Virtual  : 41079 MB
+#-----------------------------------------------------------
+start_gui
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:emb-plus-vpr-4616:part0:1.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/emb-plus-vpr-4616/1.0/board.xml as part xcve2302-sfva784-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:emb-plus-vpr-4616:part0:1.1 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/emb-plus-vpr-4616/1.1/board.xml as part xcve2302-sfva784-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:kcu105:part0:1.6 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/kcu105/1.6/board.xml as part xcku040-ffva1156-2-e specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:kcu105:part0:1.7 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/kcu105/1.7/board.xml as part xcku040-ffva1156-2-e specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:kcu116:part0:1.4 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/kcu116/1.4/board.xml as part xcku5p-ffvb676-2-e specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:kcu116:part0:1.5 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/kcu116/1.5/board.xml as part xcku5p-ffvb676-2-e specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:scu35:part0:1.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/scu35/1.0/board.xml as part xcsu35p-sbvb625-2-e specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vcu108:part0:1.6 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vcu108/1.6/board.xml as part xcvu095-ffva2104-2-e specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vcu108:part0:1.7 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vcu108/1.7/board.xml as part xcvu095-ffva2104-2-e specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vcu110:part0:1.4 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vcu110/1.4/board.xml as part xcvu190-flgc2104-2-e specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vcu129:part0:1.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vcu129/production/1.0/board.xml as part xcvu29p-fsga2577-2l-e specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vek280:part0:1.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vek280/production/1.0/board.xml as part xcve2802-vsvh1760-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vek280:part0:1.1 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vek280/production/1.1/board.xml as part xcve2802-vsvh1760-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vek280:part0:1.2 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vek280/production/1.2/board.xml as part xcve2802-vsvh1760-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vek385:part0:1.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vek385/1.0/board.xml as part xc2ve3858-ssva2112-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vek385:part0:1.1 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vek385/1.1/board.xml as part xc2ve3858-ssva2112-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vek385_1:part0:1.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vek385_2/1.0/board.xml as part xc2ve3858-ssva2112-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vhk158:part0:1.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vhk158/production/1.0/board.xml as part xcvh1582-vsva3697-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vhk158:part0:1.1 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vhk158/production/1.1/board.xml as part xcvh1582-vsva3697-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vhk158:part0:1.2 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vhk158/production/1.2/board.xml as part xcvh1582-vsva3697-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vpk180:part0:1.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vpk180/production/1.0/board.xml as part xcvp1802-lsvc4072-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vpk180:part0:1.1 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vpk180/production/1.1/board.xml as part xcvp1802-lsvc4072-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vpk180:part0:1.2 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vpk180/production/1.2/board.xml as part xcvp1802-lsvc4072-2mp-e-s specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vrk160:part0:1.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vrk160/1.0/board.xml as part xcvr1602-vsva2488-2mp-e-s-es1 specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:vrk160:part0:1.1 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vrk160/1.1/board.xml as part xcvr1602-vsva2488-2mp-e-s-es1 specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:zcu208ld:part0:2.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/zcu208ld/production/2.0/board.xml as part xczu58dr-fsvg1517-2-i specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:zcu216ld:part0:2.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/zcu216ld/production/2.0/board.xml as part xczu59dr-ffvf1760-2-i specified in board_part file is either invalid or not available
+WARNING: [Board 49-26] cannot add Board Part xilinx.com:zcu670ld:part0:1.0 available at /afs/ece.cmu.edu/support/xilinx/xilinx.release/Vivado-2025.2/2025.2/data/xhub/boards/XilinxBoardStore/boards/Xilinx/zcu670ld/1.0/board.xml as part xczu57dr-fsve1156-2-i specified in board_part file is either invalid or not available
+exit
+INFO: [Common 17-206] Exiting Vivado at Thu Jul 30 17:44:30 2026...

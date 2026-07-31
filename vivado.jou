@@ -1,0 +1,24 @@
+#-----------------------------------------------------------
+# Vivado v2025.2 (64-bit)
+# SW Build 6299465 on Fri Nov 14 12:34:56 MST 2025
+# IP Build 6300035 on Fri Nov 14 10:48:45 MST 2025
+# SharedData Build 6298862 on Thu Nov 13 04:50:51 MST 2025
+# Start of session at: Thu Jul 30 17:44:19 2026
+# Process ID         : 111357
+# Current directory  : /afs/andrew.cmu.edu/usr18/davidwa4/private/18240/swift-logic-optimized-platform
+# Command line       : vivado
+# Log file           : /afs/andrew.cmu.edu/usr18/davidwa4/private/18240/swift-logic-optimized-platform/vivado.log
+# Journal file       : /afs/andrew.cmu.edu/usr18/davidwa4/private/18240/swift-logic-optimized-platform/vivado.jou
+# Running On         : hh-1305-12.lan.local.cmu.edu
+# Platform           : RedHatEnterprise
+# Operating System   : Red Hat Enterprise Linux release 8.10 (Ootpa)
+# Processor Detail   : 12th Gen Intel(R) Core(TM) i7-12700
+# CPU Frequency      : 2100.000 MHz
+# CPU Physical cores : 12
+# CPU Logical cores  : 20
+# Host memory        : 33109 MB
+# Swap memory        : 17179 MB
+# Total Virtual      : 50289 MB
+# Available Virtual  : 41079 MB
+#-----------------------------------------------------------
+start_gui

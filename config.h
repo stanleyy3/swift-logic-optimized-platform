@@ -11,15 +11,26 @@
 // dataset to train on (0 - MNIST, 1 - Fashion MNIST)
 #define DATASET 1
 
-// number of milliseconds per update of training status
-#define TRAIN_UPDATE_FREQ 100
-
 // matrix multiplication tile dimension
 #define TILE_DIM 32
 
-// terminal output color escape sequences
-#define ANSI_COLOR_YELLOW "\x1b[33m"
-#define ANSI_COLOR_RED    "\x1b[31m"
-#define ANSI_COLOR_RESET  "\x1b[0m"
+// accuracy points published per epoch
+// note: this is the sampling rate of the training curve, not the redraw rate;
+//       the history buffer decimates itself, so a long run costs no more than a
+//       short one to store or to draw
+#define TRAIN_POINTS_PER_EPOCH 200
+
+// dashboard frames per second
+// note: the UI redraws at this rate no matter how long a single training
+//       iteration takes, and only the cells that changed are written
+#define TUI_FPS 20
+
+// smallest terminal the UI will draw a screen in
+#define TUI_MIN_COLS 60
+#define TUI_MIN_ROWS 18
+
+// force ASCII curves instead of braille
+// note: braille is used automatically when the locale looks like UTF-8
+#define TUI_ASCII_FALLBACK 0
 
 #endif

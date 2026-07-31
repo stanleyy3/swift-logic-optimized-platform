@@ -5,18 +5,29 @@
 ```
 ./
 ├── data/
-│   └── mnist/
-│       ├── test-images.idx3-ubyte
-│       ├── test-labels.idx1-ubyte
-│       ├── train-images.idx3-ubyte
-│       └── train-labels.idx1-ubyte
+│   ├── mnist/
+│   │   ├── test-images.idx3-ubyte
+│   │   ├── test-labels.idx1-ubyte
+│   │   ├── train-images.idx3-ubyte
+│   │   └── train-labels.idx1-ubyte
+│   └── fashion_mnist/
+│       └── ... (the same four files)
+├── tui/                  all terminal user interface code
+│   ├── term.c/.h         raw mode, cell grid, damage-diff renderer, key input
+│   ├── tui.c/.h          lifecycle and the nano-style chrome
+│   ├── form.c/.h         hyperparameter screen
+│   ├── dash.c/.h         live training dashboard
+│   └── plot.c/.h         braille curve plotting
 ├── .gitignore
+├── config.h              compile-time knobs
 ├── data_ops.c
 ├── data_ops.h
 ├── main.c
 ├── Makefile
 ├── mat_ops.c
 ├── mat_ops.h
+├── metrics.c             thread-safe seam between a training run and the UI
+├── metrics.h
 ├── model.c
 ├── model.h
 ├── README.md
@@ -24,16 +35,43 @@
 └── train.h
 ```
 
+The training code never touches the terminal. It publishes numbers through
+`metrics.h`, and everything that reads from or writes to the terminal lives in
+`tui/`. A run happens on a worker thread while the interface draws on the main
+thread, so the display stays responsive no matter how long one iteration takes.
+
 ## Dependencies
 
-Just the C standard library!
+The C standard library, plus POSIX (`termios`, `poll`, `ioctl`) and pthreads for
+the interface, and OpenMP for the matrix multiply. All of them come with gcc and
+glibc, so there is still nothing to install.
 
 ## Usage
 
-- To run normally: `make`
+- To run normally: `make`, then `./train` from this directory - the dataset paths
+are relative to it. An interactive terminal is required.
 To run with profiling: `make PROFILE=1`
 
 - To clean build files: `make clean`
+
+### Keys
+
+| Screen | Key | Does |
+| --- | --- | --- |
+| Form | up / down | move between fields |
+| Form | left / right | change the field's value |
+| Form | digits | type a value directly |
+| Form | Enter | start the run |
+| Form | `^X` | exit |
+| Dashboard | `^X` | stop the run, then exit |
+| Dashboard | `^P` | pause / resume |
+| Dashboard | `^R` | stop and configure another run |
+| Dashboard | `^C` | quit |
+| Dashboard | `^L` | redraw |
+
+Curves are drawn with braille glyphs, which need a UTF-8 locale and a font that
+has them. If `LANG` does not look like UTF-8 the plot falls back to ASCII;
+`TUI_ASCII_FALLBACK` in `config.h` forces the fallback on.
 
 ## Performance notes
 

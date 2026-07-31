@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -fopenmp -O3 -Wall -Wextra -MMD -MP
-LDLIBS = -lm
+CFLAGS = -fopenmp -pthread -O3 -Wall -Wextra -MMD -MP
+LDLIBS = -lm -pthread
 TARGET = train
 
 # optionally add profiling flags
@@ -11,7 +11,8 @@ endif
 BUILD_DIR = build
 
 # get .o and .d dependencies
-SRCS = $(wildcard *.c)
+# note: all terminal user interface code lives in tui/
+SRCS = $(wildcard *.c) $(wildcard tui/*.c)
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SRCS:%.c=$(BUILD_DIR)/%.d)
 
@@ -24,6 +25,7 @@ $(TARGET): $(OBJS)
 
 # compile .c files into .o files
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # create build directory if it doesn't exist

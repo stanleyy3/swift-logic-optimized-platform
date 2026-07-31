@@ -6,7 +6,6 @@
 
 #include "train.h"
 
-#include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +16,7 @@
 #include "data_ops.h"
 #include "model.h"
 #include "config.h"
+#include "metrics.h"
 
 typedef enum accuracy_type {
     TRAIN,
@@ -337,71 +337,48 @@ static float get_test_accuracy(Model *model) {
 
 }
 
-/**
- * @brief Clears terminal and prints header for model
- * 
- * @param[in] model         Model whose header is to be printed
- * @param[in] num_epochs    Number of epochs
- * @param[in] batch_size    Size of batch
- * @param[in] learning_rate Learning rate
- */
-static void print_model_header(Model *model,
-                               int num_epochs, int batch_size, float learning_rate) {
-    // \e[1;1H moves the cursor to row 1, column 1
-    // \e[2J clears the entire screen
-    printf("\e[1;1H\e[2J");
-
-    printf("--------------------------------------------------------------\n");
-    printf("| "
-               ANSI_COLOR_RED "S"
-               ANSI_COLOR_YELLOW "wift "
-               ANSI_COLOR_RED "L"
-               ANSI_COLOR_YELLOW "ogic "
-               ANSI_COLOR_RED "O"
-               ANSI_COLOR_YELLOW"ptimized "
-               ANSI_COLOR_RED "P"
-               ANSI_COLOR_YELLOW"latform"
-               ANSI_COLOR_RESET "                             |\n");
-    printf("--------------------------------------------------------------\n");
-    printf("\n");
-
-#if DATASET == 0
-    printf("Dataset: MNIST\n");
-#elif DATASET == 1
-    printf("Dataset: Fashion MNIST\n");
-#endif
-    printf("Architecture: %d -> ", model->i_d);
-    for (int L = 0; L < model->n_h_l; L++) printf("%d -> ", model->h_l_d[L]);
-    printf("%d\n", model->o_d);
-    printf("\n");
-
-    printf("Number of epochs: %d\n", num_epochs);
-    printf("Batch size: %d\n", batch_size);
-    printf("Learning rate: %.2f\n", learning_rate);
-    printf("\n");
-
-    printf("--------------------------------------------------------------\n");
-    printf("\n");
+void train_default_config(TrainConfig *cfg) {
+    cfg->num_hidden_layers = 1;
+    cfg->hidden_layer_dims[0] = 128;
+    cfg->hidden_layer_dims[1] = 128;
+    cfg->hidden_layer_dims[2] = 128;
+    cfg->num_epochs = 10;
+    cfg->batch_size = 100;
+    cfg->learning_rate = 0.1f;
 }
 
 // note: training set inputs are loaded sample-major, so it is transposed when writing into batch array
 //       test set inputs are loaded feature-major, so it is used for test accuracy without transposition
-void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
-                 int num_epochs, int batch_size, float learning_rate,
-                 bool rand_seed_rand) {
+void train_MNIST(const TrainConfig *cfg, bool rand_seed_rand) {
 
     if (rand_seed_rand)
         srand(time(NULL));
     else
         srand(42);
 
+    // the model aliases the hidden layer dimensions for its whole lifetime, so
+    // keep a copy that outlives it rather than borrowing the caller's
+    TrainConfig run = *cfg;
+
+    int batch_size = run.batch_size;
+
     Model MLP;
     // note: training input is loaded sample-major
-    new_MLP_MNIST(num_hidden_layers, hidden_layer_dims, batch_size, &MLP);
+    new_MLP_MNIST(run.num_hidden_layers, run.hidden_layer_dims, batch_size, &MLP);
 
     int epoch_iters = MLP.tr_s_s / batch_size;
-    int num_iterations = epoch_iters * num_epochs;
+    int num_iterations = epoch_iters * run.num_epochs;
 
+    // the UI has been showing "loading" until it learns these
+    metrics_set_totals(run.num_epochs, epoch_iters, num_iterations);
+
+    // a stop asked for while the dataset was being read takes effect here,
+    // rather than after a first full iteration
+    if (metrics_should_stop()) {
+        free_MLP_MNIST(&MLP);
+        metrics_finish(true, 0.f);
+        return;
+    }
 
     float *batch_X = malloc(MLP.i_d * batch_size * sizeof(float));
     int *batch_Y = malloc(batch_size * sizeof(int));
@@ -412,21 +389,37 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
     init_weights_xavier(&MLP);
     init_biases(&MLP);
 
+    // publish this often, so that a run of any length contributes a similar
+    // number of points per epoch
+    // note: the history in metrics.h decimates itself, so the total number of
+    //       points published over a run does not affect memory or drawing cost
+    int publish_stride = epoch_iters / TRAIN_POINTS_PER_EPOCH;
+    if (publish_stride < 1) publish_stride = 1;
+
     int batch_start_idx = 0;
-    float train_accuracy;
+    float train_accuracy = 0.f;
     float test_accuracy = 0.f;
 
-    // begin training run timing
-    struct timespec start;
-    timespec_get(&start, TIME_UTC);
-    struct timespec end;
-    struct timespec last_update_time;
-    timespec_get(&last_update_time, TIME_UTC);
-    double total_elapsed;
+    // running mean of batch accuracy since the last published point
+    float acc_sum = 0.f;
+    int acc_n = 0;
+
+    bool stopped = false;
+    int i;
+
+    metrics_mark_start();
 
     // gradient descent (batched)
     // note: leaves out training samples at the end of an epoch that don't fit into a batch
-    for (int i = 0; i < num_iterations; i++) {
+    for (i = 0; i < num_iterations; i++) {
+        // park here while the UI has the run paused
+        metrics_wait_if_paused();
+
+        if (metrics_should_stop()) {
+            stopped = true;
+            break;
+        }
+
         // per epoch
         if (i % epoch_iters == 0 ) {
             // shuffle training indices
@@ -459,62 +452,48 @@ void train_MNIST(int num_hidden_layers, int *hidden_layer_dims,
         batch_back_prop(&MLP, batch_X, one_hot_batch_Y, batch_size);
 
         // update params
-        update_params(&MLP, learning_rate);
+        update_params(&MLP, run.learning_rate);
 
         // test accuracy update
         if (i % epoch_iters == 0) {
             // calculate test accuracy
             test_accuracy = get_test_accuracy(&MLP);
+
+            metrics_push_test((float)i / (float)epoch_iters, test_accuracy);
         }
 
-        // calculate elapsed time since last update (milliseconds)
-        timespec_get(&end, TIME_UTC);
-        int update_elapsed = (end.tv_sec * 1e3 + end.tv_nsec / 1e6)
-                              - (last_update_time.tv_sec * 1e3 + last_update_time.tv_nsec / 1e6);
+        // accumulate this batch's training accuracy
+        // note: evaluates the predictions from this iteration's forward pass, so
+        //       against the parameters from before this iteration's update
+        acc_sum += get_accuracy(&MLP, batch_Y, batch_size, TRAIN);
+        acc_n++;
 
         // accuracy update
-        if (update_elapsed >= TRAIN_UPDATE_FREQ) {
-            // calculate training accuracy
-            // note: evaluates on predictions from previous iteration before latest parameter update
-            train_accuracy = get_accuracy(&MLP, batch_Y, batch_size, TRAIN);
+        // note: publishes the mean over the window rather than one batch's
+        //       accuracy, because a single batch is far too noisy to read as a
+        //       curve - at batch size 1 it can only ever be 0.0 or 1.0
+        if (acc_n >= publish_stride) {
+            train_accuracy = acc_sum / (float)acc_n;
 
-            print_model_header(&MLP,
-                               num_epochs, batch_size, learning_rate);
+            acc_sum = 0.f;
+            acc_n = 0;
 
-            printf("Epoch: %d\n", i / epoch_iters);
-            printf("Iteration: %d\n", i);
-            printf("Training accuracy: %.4f\n", train_accuracy);
-            printf("Most recent test accuracy: %.4f\n", test_accuracy);
-            printf("\n");
-
-            printf("--------------------------------------------------------------\n");
-            printf("\n");
-
-            // calculate total elapsed time since start of training run
-            total_elapsed = (float)(end.tv_sec - start.tv_sec) + (float)(end.tv_nsec - start.tv_nsec) / 1e9;
-
-            printf("Elapsed time: %.1f seconds\n", total_elapsed);
-            printf("Training run progress: %2.f%%\n", (float)i / num_iterations * 100);
-
-            timespec_get(&last_update_time, TIME_UTC);
+            metrics_publish(i + 1, i / epoch_iters, train_accuracy);
+            metrics_push_train((float)(i + 1) / (float)epoch_iters, train_accuracy);
         }
 
         batch_start_idx += batch_size;
     }
 
-    // calculate and print final test accuracy
+    // report where the run actually got to before the closing test pass, so the
+    // UI can say it is evaluating rather than looking stalled
+    metrics_publish(i, (i > 0 ? i - 1 : 0) / epoch_iters, train_accuracy);
+
+    // calculate final test accuracy
     test_accuracy = get_test_accuracy(&MLP);
-    print_model_header(&MLP,
-                       num_epochs, batch_size, learning_rate);
-    printf("Final test accuracy: %.4f\n", test_accuracy);
-    printf("\n");
+    metrics_push_test((float)i / (float)epoch_iters, test_accuracy);
 
-    // end training run timing
-    total_elapsed = (float)(end.tv_sec - start.tv_sec) + (float)(end.tv_nsec - start.tv_nsec) / 1e9;
-
-    // calculate and print elapsed execution time for training run
-    printf("Total elapsed time for training run: %.2f seconds\n", total_elapsed);
-    printf("\n");
+    metrics_finish(stopped, test_accuracy);
 
     // free memory
 

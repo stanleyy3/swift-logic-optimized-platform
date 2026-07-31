@@ -7,10 +7,26 @@
 #ifndef _DATA_OPS_H_
 #define _DATA_OPS_H_
 
+// dataset files needed for a run: training and test inputs and labels
+#define NUM_DATA_FILES 4
+
 typedef struct {
     float *input;
     int *labels;
 } Dataset;
+
+/**
+ * @brief Checks that every dataset file can be opened
+ *
+ * - The paths are relative, so this is mostly a check that the program was
+ * started from the project root
+ *
+ * - Worth calling before the UI takes over the screen, because the loader's own
+ * failure messages would be lost along with the alternate screen buffer
+ *
+ * @return Path of the first unreadable file, or NULL if all of them are fine
+ */
+const char *missing_data_file(void);
 
 /**
  * @brief Allocates memory for training and test sets and loads the MNIST
